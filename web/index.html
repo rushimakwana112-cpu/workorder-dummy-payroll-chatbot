@@ -1,0 +1,1341 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Payroll AI Assistant · Workorder Dummy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!--
+  Payroll AI Assistant - Blue Panther UI, connected to web_server.py (real data from SQL Server, read-only).
+  Served at http://<this-PC>:8080 . Sign-in, permissions and the audit log are the same as the Streamlit app.
+-->
+<style>
+/* ---------- tokens: Blue Panther dark (default) ---------- */
+:root, :root[data-theme="dark"] {
+  --bg:#05070d; --side:#04060b; --surface:#0a1120; --surface2:#0f192e; --line:#152038; --line2:#203052;
+  --text:#dfe7f7; --muted:#7c89a8; --heading:#f4f7ff;
+  --blue:#3d8bff; --blue-ink:#ffffff; --purple:#a855f7;
+  --glow-b:rgba(61,139,255,.38); --glow-p:rgba(168,85,247,.42);
+  --chart:#3d8bff; --chart3:#c9d6f2; --hover:rgba(61,139,255,.06);
+  --good:#4ade80; --bad:#fb7185; --code:#070b16;
+  --grad:linear-gradient(135deg,#3d8bff 0%,#6a6bff 55%,#a855f7 100%);
+  --aura1:rgba(61,139,255,.10); --aura2:rgba(168,85,247,.08);
+  color-scheme: dark;
+}
+:root[data-theme="light"] {
+  --bg:#f4eee4; --side:#fbf8f2; --surface:#fffdf8; --surface2:#f3ebde; --line:#e7ddcc; --line2:#d9cbb4;
+  --text:#13203a; --muted:#6d6f7e; --heading:#0b1630;
+  --blue:#2a5bd7; --blue-ink:#ffffff; --purple:#7d63d1;
+  --glow-b:rgba(42,91,215,.16); --glow-p:rgba(125,99,209,.18);
+  --chart:#2a5bd7; --chart3:#13203a; --hover:rgba(42,91,215,.05);
+  --good:#2f8f4e; --bad:#c43d4b; --code:#f3ebde;
+  --grad:linear-gradient(135deg,#2a5bd7 0%,#4b5fd6 55%,#7d63d1 100%);
+  --aura1:rgba(42,91,215,.06); --aura2:rgba(185,167,232,.14);
+  color-scheme: light;
+}
+* {box-sizing: border-box;}
+[hidden] {display: none !important;}
+html, body {margin: 0; height: 100%;}
+body {font-family: 'Inter', 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); font-size: 14.5px; -webkit-font-smoothing: antialiased;}
+button, input, textarea, select {font-family: inherit; font-size: inherit;}
+.mono {font-family: 'JetBrains Mono', Consolas, monospace;}
+.app {display: flex; min-height: 100vh;}
+::selection {background: var(--glow-p);}
+
+/* ---------- sidebar ---------- */
+.side {width: 240px; flex: 0 0 240px; background: var(--side); border-right: 1px solid var(--line); padding: 22px 14px;
+  display: flex; flex-direction: column; gap: 22px; position: sticky; top: 0; height: 100vh; overflow-y: auto;}
+.brand {display: flex; gap: 11px; align-items: center; padding: 0 6px;}
+.mk {width: 30px; height: 30px; border-radius: 9px; border: 1px solid var(--blue); color: var(--blue); font-weight: 700; font-size: .9rem;
+  display: grid; place-items: center; box-shadow: 0 0 14px var(--glow-b), inset 0 0 8px var(--glow-b);}
+.brand .t1 {font-weight: 600; color: var(--heading); font-size: .92rem; letter-spacing: .2px;}
+.brand .t2 {font-size: .7rem; color: var(--muted); display: flex; align-items: center; gap: 6px;}
+.dot {width: 6px; height: 6px; border-radius: 50%; background: var(--purple); box-shadow: 0 0 8px var(--purple);}
+.lbl {font-size: .66rem; letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted); padding: 0 10px; margin-bottom: 6px;}
+.nav {display: flex; flex-direction: column; gap: 2px;}
+.nav button {all: unset; cursor: pointer; display: flex; gap: 11px; align-items: center; padding: 9px 10px; border-radius: 9px;
+  color: var(--muted); font-size: .88rem; position: relative; transition: color .15s, background .15s;}
+.nav button:hover {color: var(--text); background: var(--hover);}
+.nav button.on {color: var(--heading); background: var(--surface2);}
+.nav button.on::before {content: ""; position: absolute; left: -14px; top: 9px; bottom: 9px; width: 2px; border-radius: 2px;
+  background: var(--purple); box-shadow: 0 0 10px var(--purple);}
+.nav button.on svg {color: var(--blue);}
+.nav svg {width: 17px; height: 17px; flex: 0 0 17px;}
+.stat {font-size: .78rem; padding: 0 10px;}
+.stat .row {display: flex; justify-content: space-between; padding: 4px 0; color: var(--muted);}
+.stat .row b {color: var(--text); font-weight: 500; font-family: 'JetBrains Mono', monospace; font-size: .74rem;}
+.ghost {all: unset; cursor: pointer; text-align: center; padding: 9px; border-radius: 9px; border: 1px solid var(--line2);
+  color: var(--text); font-size: .82rem; transition: .15s;}
+.ghost:hover {border-color: var(--blue); color: var(--blue); box-shadow: 0 0 14px var(--glow-b);}
+.side .grow {flex: 1;}
+.me {display: flex; gap: 10px; align-items: center; font-size: .84rem; padding: 12px 6px 0; border-top: 1px solid var(--line);}
+.ini {width: 30px; height: 30px; border-radius: 50%; background: var(--surface2); border: 1px solid var(--line2); color: var(--blue);
+  display: grid; place-items: center; font-weight: 600; font-size: .8rem;}
+.me .rl {font-size: .7rem; color: var(--muted);}
+
+/* ---------- main ---------- */
+.main {flex: 1; min-width: 0; padding: 18px 48px 150px; max-width: 1180px; margin: 0 auto;}
+.topbar {display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; gap: 10px;}
+.crumb {font-size: .84rem; color: var(--muted);} .crumb b {color: var(--text); font-weight: 500;}
+.iconbtn {all: unset; cursor: pointer; width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center;
+  border: 1px solid var(--line); color: var(--muted); transition: .15s;}
+.iconbtn:hover {color: var(--blue); border-color: var(--blue);}
+.menu {display: none;}
+
+.intro {margin-bottom: 34px;}
+.status {display: flex; flex-wrap: wrap; gap: 6px 14px; font-family: 'JetBrains Mono', monospace; font-size: .72rem; color: var(--muted); margin-bottom: 18px;}
+.status span {display: inline-flex; align-items: center; gap: 7px;}
+.status .on {color: var(--good);} .status .on::before {content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--good); box-shadow: 0 0 8px var(--good);}
+.intro h1 {font-size: 2.5rem; font-weight: 600; letter-spacing: -1.2px; line-height: 1.1; margin: 0 0 12px; color: var(--heading);}
+.intro h1 em {font-style: normal; color: var(--blue); text-shadow: 0 0 22px var(--glow-b);}
+.intro p {margin: 0; color: var(--muted); max-width: 560px; line-height: 1.65;}
+
+.sec {display: flex; justify-content: space-between; align-items: center; margin: 0 0 12px; gap: 10px;}
+.sec .t {font-size: .66rem; letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted);}
+.btn {all: unset; cursor: pointer; padding: 7px 13px; border-radius: 8px; border: 1px solid var(--line2); font-size: .8rem; color: var(--text); transition: .15s;}
+.btn:hover {border-color: var(--blue); color: var(--blue);}
+.btn.primary {background: var(--blue); color: var(--blue-ink); border-color: var(--blue); font-weight: 600; box-shadow: 0 0 20px var(--glow-b);}
+.btn.primary:hover {box-shadow: 0 0 26px var(--glow-p); color: var(--blue-ink);}
+.cards {display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 18px;}
+.qcard {all: unset; cursor: pointer; display: flex; flex-direction: column; gap: 6px; padding: 16px 16px 14px; border-radius: 12px;
+  background: var(--surface); border: 1px solid var(--line); transition: border-color .15s, box-shadow .15s, transform .15s; position: relative;}
+.qcard:hover {border-color: var(--blue); box-shadow: 0 0 0 1px var(--glow-b), 0 0 24px -6px var(--glow-b); transform: translateY(-1px);}
+.qcard .ix {font-family: 'JetBrains Mono', monospace; font-size: .68rem; color: var(--purple);}
+.qcard .tt {font-weight: 500; font-size: .9rem; color: var(--heading);}
+.qcard .ss {font-size: .78rem; color: var(--muted);}
+.qcard .ch {position: absolute; right: 14px; top: 13px; color: var(--muted); transition: .15s;}
+.qcard:hover .ch {color: var(--blue); transform: translateX(2px);}
+.tipbar {border-left: 2px solid var(--purple); padding: 4px 0 4px 14px; font-size: .82rem; color: var(--muted); margin-bottom: 26px; line-height: 1.65;}
+.tipbar b {color: var(--text); font-weight: 500;} .tipbar i {color: var(--blue); font-style: normal;}
+
+/* ---------- chat ---------- */
+.chat {display: flex; flex-direction: column; gap: 18px;}
+.umsg {display: flex; justify-content: flex-end;}
+.umsg .b {max-width: 72%; background: var(--surface2); border: 1px solid var(--line); border-radius: 14px 14px 4px 14px; padding: 10px 15px; color: var(--heading);}
+.umsg .av {display: none;}
+.umsg pre {margin: 0; white-space: pre-wrap; font-family: 'JetBrains Mono', monospace; font-size: .82rem;}
+.amsg {background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px;}
+.ahead {display: flex; gap: 12px; align-items: flex-start;}
+.ahead .tx {flex: 1; line-height: 1.65;}
+.ahead .tx b {color: var(--heading); font-weight: 600;}
+.live {font-family: 'JetBrains Mono', monospace; font-size: .68rem; padding: 3px 9px; border-radius: 99px; border: 1px solid var(--line2); color: var(--good); white-space: nowrap;}
+.kpis {display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; margin: 16px 0; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden;}
+.kpi {background: var(--surface); padding: 13px 15px;}
+.kpi .l {font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .8px;}
+.kpi .v {font-family: 'JetBrains Mono', monospace; font-size: 1.15rem; font-weight: 500; color: var(--blue); margin-top: 4px;}
+.kpi .d {font-size: .7rem; margin-top: 2px;} .kpi .d.up {color: var(--good);} .kpi .d.dn {color: var(--bad);}
+.tabs {display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin-top: 8px; overflow-x: auto;}
+.tabs button {all: unset; cursor: pointer; padding: 9px 12px; font-size: .8rem; color: var(--muted); border-bottom: 1px solid transparent; margin-bottom: -1px; white-space: nowrap;}
+.tabs button:hover {color: var(--text);}
+.tabs button.on {color: var(--blue); border-bottom-color: var(--blue); box-shadow: 0 6px 10px -8px var(--blue);}
+.pane {padding: 16px 0 2px;}
+.tablewrap {overflow: auto; max-height: 380px; border: 1px solid var(--line); border-radius: 10px;}
+table {border-collapse: collapse; width: 100%; font-size: .82rem;}
+th, td {padding: 8px 12px; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--line);}
+th {position: sticky; top: 0; background: var(--surface2); font-weight: 500; color: var(--muted); font-size: .72rem; text-transform: uppercase; letter-spacing: .6px;}
+td.n {text-align: right; font-family: 'JetBrains Mono', monospace; font-size: .78rem;} th.n {text-align: right;}
+tbody tr:last-child td {border-bottom: 0;}
+tr:hover td {background: var(--hover);}
+td.neg {color: var(--bad);}
+.sql {background: var(--code); border: 1px solid var(--line); border-radius: 10px; padding: 14px; overflow-x: auto; font-family: 'JetBrains Mono', Consolas, monospace; font-size: .78rem; line-height: 1.6; white-space: pre;}
+.sql .k {color: var(--purple);} .sql .f {color: var(--blue);} .sql .s {color: var(--good);} .sql .c {color: var(--text);}
+.row-actions {display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;}
+.note {margin-top: 14px; font-size: .76rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 11px; line-height: 1.6;}
+.note b {color: var(--text); font-weight: 500;}
+.note .timechip {font-family: 'JetBrains Mono', monospace; color: var(--purple); margin-right: 10px;}
+.chart svg {width: 100%; height: auto; display: block;}
+.chart polyline {filter: drop-shadow(0 0 5px var(--glow-b));}
+.legend {display: flex; gap: 16px; justify-content: center; font-size: .74rem; color: var(--muted); margin-top: 6px;}
+.legend span::before {content: ""; display: inline-block; width: 12px; height: 2px; border-radius: 2px; margin-right: 7px; vertical-align: middle; background: var(--c);}
+.typing {display: inline-flex; gap: 4px; vertical-align: middle;} .typing i {width: 5px; height: 5px; border-radius: 50%; background: var(--blue); animation: b 1s infinite;}
+.typing i:nth-child(2) {animation-delay: .15s; background: var(--purple);} .typing i:nth-child(3) {animation-delay: .3s;}
+@keyframes b {0%, 80%, 100% {opacity: .2;} 40% {opacity: 1;}}
+.opts {display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px;}
+
+/* ---------- input ---------- */
+.inputbar {position: fixed; left: 240px; right: 0; bottom: 0; padding: 14px 48px 16px; background: linear-gradient(transparent, var(--bg) 35%);}
+.inputbox {max-width: 1084px; margin: 0 auto; display: flex; gap: 10px; align-items: flex-end; background: var(--surface); border: 1px solid var(--line2);
+  border-radius: 14px; padding: 7px 7px 7px 16px; transition: border-color .15s, box-shadow .15s;}
+.inputbox:focus-within {border-color: var(--blue); box-shadow: 0 0 0 3px var(--glow-b), 0 0 30px -8px var(--glow-p);}
+.inputbox textarea {flex: 1; border: 0; outline: 0; resize: none; background: transparent; color: var(--text); padding: 9px 0; max-height: 140px; line-height: 1.5;}
+.inputbox textarea::placeholder {color: var(--muted);}
+.send {all: unset; cursor: pointer; width: 38px; height: 38px; border-radius: 10px; background: var(--blue); color: var(--blue-ink); display: grid; place-items: center; transition: .15s;}
+.send:hover {box-shadow: 0 0 18px var(--glow-p);}
+.send:disabled {opacity: .4; cursor: default; box-shadow: none;}
+.hint {max-width: 1084px; margin: 7px auto 0; font-size: .7rem; color: var(--muted); text-align: center;}
+.inputbar .monthhint {max-width: 1084px; margin-top: 2px;} .monthhint b {font-weight: 600;}
+@media (max-width: 1340px) {.monthhint .mh-long {display: none;}}   /* small screens: short line, full text on hover */
+
+/* ---------- other pages ---------- */
+.panel {background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px; margin-bottom: 14px;}
+.panel h3 {margin: 0 0 4px; color: var(--heading); font-size: 1rem; font-weight: 600;} .panel .sub2 {color: var(--muted); font-size: .82rem; margin-bottom: 14px;}
+.hist {display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 1px solid var(--line); font-size: .88rem;}
+.hist:last-child {border-bottom: 0;} .hist .w {color: var(--muted); font-size: .74rem; white-space: nowrap; font-family: 'JetBrains Mono', monospace;}
+.hist a {color: var(--blue); text-decoration: none;} .hist a:hover {text-shadow: 0 0 12px var(--glow-b);}
+details.faq {border-bottom: 1px solid var(--line); padding: 13px 0;} details.faq:last-child {border-bottom: 0;}
+details.faq summary {cursor: pointer; font-weight: 500; list-style: none; display: flex; justify-content: space-between;}
+details.faq summary::-webkit-details-marker {display: none;}
+details.faq summary::after {content: "+"; color: var(--purple); font-family: 'JetBrains Mono', monospace;}
+details.faq[open] summary::after {content: "–";}
+details.faq p {margin: 8px 0 0; line-height: 1.65; color: var(--muted);} details.faq p b {color: var(--text); font-weight: 500;}
+.setgrid {display: grid; grid-template-columns: 1fr 1fr; gap: 14px;}
+.radio {display: flex; gap: 10px; align-items: flex-start; padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px; margin-bottom: 8px; cursor: pointer; transition: .15s;}
+.radio b {font-weight: 500;}
+.radio:has(input:checked) {border-color: var(--blue); box-shadow: 0 0 16px -4px var(--glow-b);}
+.radio input {accent-color: var(--blue); margin-top: 4px;}
+.radio .d {font-size: .78rem; color: var(--muted);}
+.ex {border-left: 2px solid var(--purple); padding: 6px 12px; font-size: .8rem; margin-top: 10px; color: var(--muted);} .ex b {color: var(--text); font-weight: 500;}
+.switch {display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--line); font-size: .88rem;}
+.switch:last-child {border-bottom: 0;}
+.switch small {color: var(--muted);}
+.switch input {appearance: none; width: 34px; height: 19px; border-radius: 99px; background: var(--line2); position: relative; cursor: pointer; flex: 0 0 34px; transition: .15s;}
+.switch input::after {content: ""; position: absolute; top: 2px; left: 2px; width: 15px; height: 15px; border-radius: 50%; background: var(--muted); transition: .15s;}
+.switch input:checked {background: var(--glow-b);}
+.switch input:checked::after {left: 17px; background: var(--blue); box-shadow: 0 0 8px var(--blue);}
+
+/* ---------- login ---------- */
+.login {position: fixed; inset: 0; z-index: 50; background: var(--bg); display: grid; place-items: center; padding: 16px; overflow: hidden;}
+.login::before, .login::after {content: ""; position: absolute; width: 520px; height: 520px; border-radius: 50%; filter: blur(110px); opacity: .22; pointer-events: none;}
+.login::before {background: var(--blue); top: -180px; left: -120px;}
+.login::after {background: var(--purple); bottom: -200px; right: -140px;}
+.lcard {position: relative; z-index: 1; width: 100%; max-width: 380px; background: var(--surface); border: 1px solid var(--line2); border-radius: 16px; padding: 30px 28px;}
+.lcard .brand {padding: 0;}
+.lcard h2 {margin: 26px 0 4px; color: var(--heading); font-weight: 600; letter-spacing: -.4px;} .lcard .sub3 {color: var(--muted); font-size: .84rem; margin-bottom: 18px;}
+.lcard label {font-size: .76rem; color: var(--muted); display: block; margin: 14px 0 6px;}
+.lcard input {width: 100%; padding: 11px 13px; border: 1px solid var(--line2); border-radius: 10px; background: var(--surface2); color: var(--text); outline: 0; transition: .15s;}
+.lcard input:focus {border-color: var(--blue); box-shadow: 0 0 0 3px var(--glow-b);}
+.lcard .btn.primary {display: block; width: 100%; box-sizing: border-box; text-align: center; margin-top: 22px; padding: 11px;}
+.lcard .foot {text-align: center; font-size: .72rem; color: var(--muted); margin-top: 16px; line-height: 1.6;}
+
+
+/* ---------- Blue Panther touches ---------- */
+body {background:
+  radial-gradient(900px 520px at 85% -10%, var(--aura2), transparent 60%),
+  radial-gradient(800px 500px at 10% 0%, var(--aura1), transparent 60%), var(--bg); background-attachment: fixed;}
+.intro h1, .lcard h2, .panel h3, .brand .t1 {font-family: 'Space Grotesk', 'Inter', sans-serif;}
+.intro h1 {letter-spacing: -1.4px;}
+.intro h1 em {background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: none; filter: drop-shadow(0 0 18px var(--glow-b));}
+.mk {border: 0; background: var(--surface2); position: relative; box-shadow: 0 0 16px var(--glow-b);}
+.mk::before {content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px; background: var(--grad);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude;}
+.side {background: linear-gradient(180deg, var(--side), var(--bg));}
+.nav button.on {background: linear-gradient(90deg, var(--hover), var(--surface2));}
+.btn.primary, .send {background: var(--grad); border-color: transparent;}
+.btn.primary:hover, .send:hover {box-shadow: 0 0 22px var(--glow-b), 0 0 30px -6px var(--glow-p);}
+.amsg, .panel, .lcard {box-shadow: 0 1px 0 rgba(255,255,255,.02) inset, 0 10px 30px -18px rgba(0,0,0,.55);}
+.qcard::after {content: ""; position: absolute; left: 16px; right: 16px; bottom: 0; height: 1px; background: var(--grad); opacity: 0; transition: opacity .2s;}
+.qcard:hover::after {opacity: .9;}
+.kpi .v {background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent;}
+.inputbox {box-shadow: 0 8px 30px -14px rgba(0,0,0,.5);}
+:root[data-theme="light"] .amsg, :root[data-theme="light"] .panel, :root[data-theme="light"] .lcard {box-shadow: 0 1px 2px rgba(19,32,58,.04), 0 10px 26px -18px rgba(19,32,58,.25);}
+:root[data-theme="light"] .inputbox {box-shadow: 0 8px 24px -16px rgba(19,32,58,.3);}
+:root[data-theme="light"] .side {box-shadow: 1px 0 0 var(--line);}
+:root[data-theme="light"] .login::before, :root[data-theme="light"] .login::after {opacity: .14;}
+
+/* ---------- responsive ---------- */
+@media (max-width: 1100px) {.cards {grid-template-columns: repeat(2, minmax(0, 1fr));}}
+@media (max-width: 820px) {
+  .side {position: fixed; left: 0; top: 0; z-index: 40; transform: translateX(-100%); transition: .2s; box-shadow: 0 0 40px rgba(0,0,0,.5);}
+  .app.open .side {transform: none;}
+  .menu {display: grid;}
+  .main {padding: 14px 16px 150px;}
+  .topbar {margin-bottom: 26px;}
+  .inputbar {left: 0; padding: 10px 16px 14px;}
+  .cards {grid-template-columns: 1fr;}
+  .intro h1 {font-size: 1.8rem;}
+  .setgrid {grid-template-columns: 1fr;}
+  .umsg .b {max-width: 88%;}
+  .kpis {grid-template-columns: 1fr 1fr;}
+  .ahead > div:first-child {display: none;}
+  .amsg {padding: 14px;}
+}
+</style>
+<style>
+/* ---------- additions for the live version ---------- */
+.lerr {color: var(--bad); font-size: .8rem; margin-top: 12px; min-height: 1em;}
+.lok {color: var(--good); font-size: .8rem; margin-top: 12px;}
+.pwbox[hidden] {display: none;}
+.status .off {color: var(--bad);} .status .off::before {content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--bad); box-shadow: 0 0 8px var(--bad);}
+.toast {position: fixed; right: 18px; bottom: 18px; z-index: 60; max-width: 420px; background: var(--surface); border: 1px solid var(--line2);
+  border-radius: 12px; padding: 12px 16px; font-size: .84rem; box-shadow: 0 10px 30px -10px rgba(0,0,0,.6); line-height: 1.5;}
+.toast.bad {border-color: var(--bad);} .toast.good {border-color: var(--good);}
+.expbar {margin: 0 0 12px; padding: 8px 14px; border-radius: 10px; font-size: .82rem; color: var(--text);
+  border: 1px solid color-mix(in srgb, #f59e0b 55%, transparent); background: color-mix(in srgb, #f59e0b 12%, transparent);}
+.toast b {font-family: 'JetBrains Mono', monospace; color: var(--blue);}
+.utable td .btn {padding: 4px 9px; font-size: .74rem; margin-right: 4px;}
+.pill {font-size: .7rem; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--line2); color: var(--muted);}
+.pill.admin {color: var(--purple); border-color: var(--purple);} .pill.on {color: var(--good); border-color: var(--good);}
+.pill.off {color: var(--bad); border-color: var(--bad);}
+.form-row {display: flex; gap: 8px; flex-wrap: wrap; align-items: end;}
+.form-row label {font-size: .74rem; color: var(--muted); display: flex; flex-direction: column; gap: 5px;}
+.form-row input, .form-row select, .pwgrid input {padding: 8px 11px; border: 1px solid var(--line2); border-radius: 9px; background: var(--surface2); color: var(--text); outline: 0;}
+.form-row input:focus, .pwgrid input:focus {border-color: var(--blue);}
+.pwgrid {display: grid; gap: 8px; max-width: 360px;}
+.ins {line-height: 1.7;} .ins b {color: var(--heading);}
+.ins ul {margin: 6px 0 0 18px; padding: 0;}
+.more {font-size: .76rem; color: var(--muted); margin-top: 8px;}
+.side .adm[hidden] {display: none !important;}
+.hist .x {all: unset; cursor: pointer; color: var(--muted); padding: 0 6px;} .hist .x:hover {color: var(--bad);}
+.newchat-top {margin-right: 8px;}
+.chkgrid {display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 4px 12px; font-size: .82rem;}
+.chkgrid label {display: flex; gap: 7px; align-items: center; padding: 3px 0; cursor: pointer; color: var(--text);}
+.chkgrid input {accent-color: var(--blue);}
+.chkgrid.deps {max-height: 260px; overflow: auto; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; grid-template-columns: 1fr;}
+.findbox {width: 100%; margin-bottom: 8px; padding: 8px 11px; border: 1px solid var(--line2); border-radius: 9px; background: var(--surface2); color: var(--text); outline: 0;}
+.utable td.acc {white-space: normal; min-width: 160px; font-size: .78rem; color: var(--muted);}
+.utable td:last-child {white-space: normal;}
+
+/* temporary password box */
+.modal {position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; padding: 16px;
+  background: color-mix(in srgb, var(--bg) 70%, transparent); backdrop-filter: blur(6px);}
+.mcard {width: 100%; max-width: 460px; background: var(--surface); border: 1px solid var(--line2); border-radius: 18px; padding: 24px;
+  box-shadow: 0 30px 80px -20px rgba(0,0,0,.7), 0 0 40px -12px var(--glow-p); animation: rise .2s ease-out both;}
+.mcard h3 {margin: 0 0 4px; color: var(--heading); font-family: 'Space Grotesk', 'Inter', sans-serif;}
+.pwrow {display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 14px; margin-top: 8px;
+  border: 1px solid var(--line); border-radius: 12px; background: var(--surface2);}
+.pwrow .k {font-size: .78rem; color: var(--muted);}
+.pwrow .v {color: var(--heading); user-select: all;}
+.pwrow .v.big {font-size: 1.25rem; letter-spacing: .5px; color: var(--blue);}
+/* user table actions: tidy, never cut off */
+.utable td:last-child {min-width: 250px;}
+.utable td:last-child .btn {display: inline-block; margin: 2px 4px 2px 0; white-space: nowrap;}
+/* ================= modern chat look (same Blue Panther colours) ================= */
+#page-chat {max-width: 880px; margin: 0 auto;}
+.intro h1 {font-size: 2.7rem;}
+.chat {gap: 26px;}
+@keyframes rise {from {opacity: 0; transform: translateY(8px);} to {opacity: 1; transform: none;}}
+.umsg, .amsg {animation: rise .28s ease-out both;}
+/* your question: a soft gradient bubble */
+.umsg .b {background: linear-gradient(135deg, color-mix(in srgb, var(--blue) 22%, var(--surface2)), color-mix(in srgb, var(--purple) 16%, var(--surface2)));
+  border: 1px solid color-mix(in srgb, var(--blue) 30%, var(--line)); border-radius: 18px 18px 6px 18px; padding: 11px 16px;
+  box-shadow: 0 6px 20px -12px var(--glow-b); line-height: 1.55;}
+/* the answer: no heavy box, a clean sheet with a glowing avatar */
+.amsg {background: color-mix(in srgb, var(--surface) 82%, transparent); border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  border-radius: 20px; padding: 20px 22px 16px; backdrop-filter: blur(6px);
+  box-shadow: 0 1px 0 rgba(255,255,255,.03) inset, 0 18px 40px -28px rgba(0,0,0,.6);}
+.ahead {gap: 14px;}
+.ahead > div:first-child {flex: 0 0 34px; width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center;
+  background: var(--grad); box-shadow: 0 0 18px -2px var(--glow-p);}
+.ahead > div:first-child svg {width: 18px; height: 18px;}
+.ahead > div:first-child svg circle:first-child {stroke: #fff;}
+.ahead > div:first-child svg circle:last-child {fill: #fff;}
+.ahead .tx {font-size: .95rem; line-height: 1.7; padding-top: 4px;}
+.ahead .tx b {background: none;}
+.live {border: 0; background: color-mix(in srgb, var(--good) 14%, transparent); padding: 4px 10px;}
+/* KPI tiles: separate cards */
+.kpis {background: none; border: 0; gap: 10px; margin: 18px 0 14px;}
+.kpi {border: 1px solid var(--line); border-radius: 14px; background: var(--surface2); padding: 12px 14px; transition: transform .15s, border-color .15s;}
+.kpi:hover {transform: translateY(-2px); border-color: color-mix(in srgb, var(--blue) 45%, var(--line));}
+.kpi .v {font-size: 1.22rem;}
+/* tabs: segmented control */
+.tabs {display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface2); margin-top: 4px;}
+.tabs button {border: 0; margin: 0; padding: 6px 14px; border-radius: 9px; font-size: .8rem;}
+.tabs button.on {background: var(--surface); color: var(--heading); box-shadow: 0 1px 2px rgba(0,0,0,.25), 0 0 0 1px var(--line); border: 0;}
+.pane {padding-top: 14px;}
+/* tables */
+.tablewrap {border-radius: 14px;}
+th {background: color-mix(in srgb, var(--surface2) 92%, var(--blue));}
+tbody tr:nth-child(even) td {background: color-mix(in srgb, var(--surface2) 45%, transparent);}
+/* suggestion chips: pills */
+.opts {gap: 8px; margin-top: 16px;}
+.opts .btn {border-radius: 999px; padding: 7px 14px 7px 12px; background: var(--surface2); border-color: var(--line);}
+.opts .btn::before {content: "↗"; margin-right: 6px; color: var(--purple);}
+.opts .btn:hover {background: color-mix(in srgb, var(--blue) 12%, var(--surface2)); border-color: var(--blue);}
+.row-actions .btn {border-radius: 10px;}
+/* notes line: quiet meta row */
+.note {border-top: 0; margin-top: 12px; padding: 9px 12px; border-radius: 12px; background: color-mix(in srgb, var(--surface2) 60%, transparent);}
+.note .timechip {display: inline-block; padding: 1px 8px; border-radius: 99px; background: color-mix(in srgb, var(--purple) 16%, transparent);}
+/* input: floating pill */
+.inputbar {background: linear-gradient(transparent, var(--bg) 40%);}
+.inputbox {max-width: 880px; border-radius: 22px; padding: 8px 8px 8px 20px;
+  background: color-mix(in srgb, var(--surface) 90%, transparent); backdrop-filter: blur(10px);
+  box-shadow: 0 12px 40px -18px rgba(0,0,0,.7), 0 0 0 1px var(--line2);}
+.inputbox:focus-within {box-shadow: 0 0 0 1px var(--blue), 0 0 32px -8px var(--glow-b), 0 12px 40px -18px rgba(0,0,0,.7);}
+.send {border-radius: 14px; width: 40px; height: 40px;}
+.hint {max-width: 880px;}
+.tipbar {border-left: 0; border-radius: 14px; padding: 12px 16px; background: color-mix(in srgb, var(--surface2) 70%, transparent);
+  border: 1px solid var(--line);}
+/* "/" SQL mode: coloured while typing (like SSMS) */
+.qwrap {position: relative; flex: 1; min-width: 0; display: grid;}
+.qwrap > * {grid-area: 1 / 1; margin: 0; padding: 9px 0; font: inherit; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere;
+  border: 0; max-height: 140px; overflow: hidden;}
+#qhl {pointer-events: none; color: var(--text); visibility: hidden;}
+.inputbox.sqlmode .qwrap > * {font-family: 'JetBrains Mono', Consolas, monospace; font-size: .86rem;}
+.inputbox.sqlmode #qhl {visibility: visible;}
+.inputbox.sqlmode textarea {color: transparent; caret-color: var(--text); position: relative;}
+.inputbox.sqlmode textarea::selection {background: var(--glow-b); color: transparent;}
+.inputbox.sqlmode {box-shadow: 0 0 0 1px var(--purple), 0 0 26px -8px var(--glow-p);}
+.hl-slash {color: var(--purple); font-weight: 700;}
+.hl-k {color: #569cd6; font-weight: 600;} .hl-f {color: #c586c0;} .hl-s {color: #ce9178;} .hl-n {color: #b5cea8;}
+.hl-c {color: #4ec9b0;} .hl-t {color: #e5a64a; font-weight: 600;} .hl-o {color: var(--muted);}
+.hl-bad {color: var(--bad); text-decoration: underline wavy var(--bad);}
+:root[data-theme="light"] .hl-k {color: #0000ff;} :root[data-theme="light"] .hl-f {color: #a626a4;}
+:root[data-theme="light"] .hl-s {color: #c41a16;} :root[data-theme="light"] .hl-n {color: #098658;}
+:root[data-theme="light"] .hl-c {color: #00797a;} :root[data-theme="light"] .hl-t {color: #b35c00;}
+.umsg pre.sqlq {white-space: pre-wrap;}
+.sqlbadge {display: inline-block; font-size: .66rem; letter-spacing: 1px; text-transform: uppercase; color: var(--purple);
+  margin: 0 0 4px; font-family: 'JetBrains Mono', monospace;}
+/* typing dots: bigger, smoother */
+.typing i {width: 7px; height: 7px;}
+@media (max-width: 820px) {
+  .ahead > div:first-child {display: grid;}
+  .amsg {padding: 16px;}
+  .intro h1 {font-size: 1.9rem;}
+}
+</style>
+</head>
+<body>
+
+<!-- ================= LOGIN ================= -->
+<div class="login" id="login" hidden>
+  <form class="lcard" id="loginForm" autocomplete="on">
+    <div class="brand"><div class="mk" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M4 3.5l4.2 4.1h7.6L20 3.5v9.2c0 4.3-3.6 7.8-8 7.8s-8-3.5-8-7.8z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8.2 12.4l2.3.9M15.8 12.4l-2.3.9" stroke="var(--purple)" stroke-width="1.8" stroke-linecap="round"/><path d="M10.6 16.2l1.4 1 1.4-1" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div class="t1">Workorder Dummy</div><div class="t2"><span class="dot"></span>Payroll AI</div></div></div>
+    <div id="loginPart">
+      <h2>Sign in</h2>
+      <div class="sub3">Use the ID and password given to you.</div>
+      <label for="uid">User ID</label><input id="uid" autocomplete="username" autocapitalize="none" spellcheck="false">
+      <label for="pw">Password</label><input id="pw" type="password" autocomplete="current-password">
+      <button class="btn primary" type="submit" id="loginBtn">Continue</button>
+    </div>
+    <div id="pwPart" hidden>
+      <h2>Set your password</h2>
+      <div class="sub3">Welcome! Please choose your own password (8+ characters, letters and numbers).</div>
+      <label for="pwCur">Temporary password</label><input id="pwCur" type="password" autocomplete="current-password">
+      <label for="pwNew">New password</label><input id="pwNew" type="password" autocomplete="new-password">
+      <label for="pwNew2">Confirm new password</label><input id="pwNew2" type="password" autocomplete="new-password">
+      <button class="btn primary" type="submit">Save password</button>
+    </div>
+    <div class="lerr" id="loginErr"></div>
+    <div class="foot">Internal use only · all access is logged</div>
+  </form>
+</div>
+
+<div class="app" id="app" hidden>
+  <!-- ================= SIDEBAR ================= -->
+  <aside class="side">
+    <div class="brand"><div class="mk" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M4 3.5l4.2 4.1h7.6L20 3.5v9.2c0 4.3-3.6 7.8-8 7.8s-8-3.5-8-7.8z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8.2 12.4l2.3.9M15.8 12.4l-2.3.9" stroke="var(--purple)" stroke-width="1.8" stroke-linecap="round"/><path d="M10.6 16.2l1.4 1 1.4-1" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div class="t1">Workorder Dummy</div><div class="t2"><span class="dot"></span>Payroll AI</div></div></div>
+    <div>
+      <div class="lbl">Workspace</div>
+      <nav class="nav" id="nav">
+        <button data-page="chat" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Chat</button>
+        <button data-page="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>History</button>
+        <button data-page="tds"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M8 11h2M14 11h2M8 15h2M14 15h2M8 19h2M14 19h2"/></svg>TDS calculator</button>
+        <button data-page="documents"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></svg>Documents</button>
+        <button data-page="faq"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>Knowledgebase</button>
+        <button data-page="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>Settings</button>
+      </nav>
+    </div>
+    <div class="adm" id="admNav" hidden>
+      <div class="lbl">Admin</div>
+      <nav class="nav" id="nav2">
+        <button data-page="users"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg>Users</button>
+        <button data-page="activity" id="navActivity"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Activity log</button>
+      </nav>
+    </div>
+    <div>
+      <div class="lbl">Data</div>
+      <div class="stat">
+        <div class="row">Table <b id="sTable">–</b></div>
+        <div class="row">Months by <b id="sideMode">–</b></div>
+        <div class="row">Data <b id="sRange">–</b></div>
+        <div class="row">Latest <b id="sLatest">–</b></div>
+        <div class="row">Refreshed <b id="sRefreshed">–</b></div>
+      </div>
+    </div>
+    <button class="ghost adm" id="refreshBtn" hidden>Refresh database</button>
+    <div class="grow"></div>
+    <div class="me"><div class="ini" id="meIni">·</div><div><div id="meName">–</div><div class="rl" id="meRole">–</div></div>
+      <button class="iconbtn" id="logout" title="Sign out" style="margin-left:auto;width:30px;height:30px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg></button></div>
+  </aside>
+
+  <!-- ================= MAIN ================= -->
+  <main class="main">
+    <div class="topbar">
+      <div style="display:flex;gap:10px;align-items:center">
+        <button class="iconbtn menu" id="menuBtn" aria-label="Menu">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+        <div class="crumb" id="crumb">Payroll / <b>Chat</b></div>
+      </div>
+      <div style="display:flex;align-items:center">
+        <button class="btn status" id="aiBtn" style="margin:0 8px 0 0" title="AI on / off">AI …</button>
+        <button class="btn newchat-top" id="newChat" hidden>+ New chat</button>
+        <button class="iconbtn" id="themeBtn" title="Light / dark">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+      </div>
+    </div>
+    <div class="expbar" id="expBar" role="status" hidden></div>
+
+    <!-- ---------- CHAT PAGE ---------- -->
+    <section class="page" id="page-chat">
+      <div class="intro" id="intro">
+        <div class="status" id="statusLine"></div>
+        <h1 id="hello">Hello.<br>Ask your <em>payroll</em> anything.</h1>
+        <p>Salaries, statutory deductions, departments, work orders, CTC margins, projections and trends — in plain English.</p>
+      </div>
+      <div class="tipbar" id="tip"><b>Tip</b> — ask anything, e.g. <i>which workorder has highest margin</i>, <i>give me projection of oct-26</i> or
+        <i>compare aug-26 and sep-26 ctc and margin</i>. Say <i>salary month</i>, <i>liable month</i> or <i>paid in oct-26</i> to choose the month column.</div>
+      <div class="chat" id="chat"></div>
+    </section>
+
+    <!-- ---------- HISTORY PAGE ---------- -->
+    <section class="page" id="page-history" hidden>
+      <div class="panel"><h3>Query history</h3><div class="sub2">Your own questions only. Click one to ask it again. Removing one hides it from this list only.</div>
+        <div id="histList"></div><div class="row-actions"><button class="btn" id="histClear">Clear my list</button></div></div>
+    </section>
+
+    <!-- ---------- TDS CALCULATOR PAGE ---------- -->
+    <section class="page" id="page-tds" hidden>
+      <div class="panel"><h3>Salary run — all employees</h3>
+        <div class="sub2">Salary to pay and TDS to deduct for every employee in one sheet (download CSV for Excel). Blank month = the month after the latest salary data. Also in chat: <i>salary run for oct-26</i>.</div>
+        <form class="form-row" id="runForm">
+          <label>Month<input id="runMonth" placeholder="e.g. oct-26" style="width:130px"></label>
+          <button class="btn primary" type="submit">Build list</button>
+        </form>
+        <div id="runResult"></div>
+      </div>
+      <div class="panel"><h3>TDS calculator <span class="w" id="tdsFy" style="font-weight:400;color:var(--muted);font-size:.8rem"></span></h3>
+        <div class="sub2">Type amounts only (no names or codes). Worked out on this PC — nothing is sent outside. Same rules as <i>proposed tds of …</i>: standard deduction ₹75,000 new / ₹50,000 old, 87A rebate, 4% cess.</div>
+        <form class="form-row" id="tdsForm">
+          <label>Paid salary (FY so far)<input id="tdsPaid" inputmode="decimal" placeholder="e.g. 600000" required></label>
+          <label>Proposed salary (rest of FY)<input id="tdsProp" inputmode="decimal" placeholder="e.g. 600000" required></label>
+          <label>Regime<select id="tdsRegime"><option value="new">New regime</option><option value="old">Old regime</option></select></label>
+          <label>TDS already paid<input id="tdsPaidTds" inputmode="decimal" placeholder="0"></label>
+          <label>Pending months<input id="tdsMonths" type="number" min="0" max="12" step="1" style="width:110px"></label>
+          <button class="btn primary" type="submit">Calculate</button>
+        </form>
+        <div id="tdsResult"></div>
+      </div>
+      <div class="panel"><h3>TDS calculator history</h3><div class="sub2">Your own calculations only, saved on this PC. Click one to fill the form again. × deletes it.</div>
+        <div id="tdsList"></div><div class="row-actions"><button class="btn" id="tdsClear">Delete all</button></div></div>
+    </section>
+
+    <!-- ---------- DOCUMENTS PAGE ---------- -->
+    <section class="page" id="page-documents" hidden>
+      <div class="panel"><h3>Documents</h3><div class="sub2">Download the results from this sign-in. CSV opens in Excel.</div><div id="docList"></div></div>
+    </section>
+
+    <!-- ---------- FAQ PAGE ---------- -->
+    <section class="page" id="page-faq" hidden>
+      <div class="panel"><h3>Knowledgebase</h3><div class="sub2">How the assistant reads your questions and calculates figures.</div>
+        <details class="faq" open><summary>Salary month vs liable month vs payment month?</summary>
+          <p><b>Salary month</b> = Month + Year columns (the month the salary is for; Sep-26 salary → 9, 2026). <b>Liable month</b> = month_year
+          (payment date − 1 month; paid 07-Oct-26 → 07-Sep-26). <b>Payment date</b> = month_year + 1 month, calculated by the chatbot (not stored in SQL).
+          Pick the default in Settings, or say <i>salary month</i>, <i>liable month</i> or <i>paid in oct-26</i>.</p></details>
+        <details class="faq"><summary>How is base sales value and margin calculated?</summary>
+          <p>Base sales value = Invoice × 100 / 118 (excl. 18% GST), counted once per work order + salary month. Margin = Base sales value − CTC.
+          Margin % = Margin ÷ CTC × 100 (ask <i>margin % on base sales</i> for the sales basis). "Highest margin" answers show the top work order by
+          <b>amount</b> and by <b>margin %</b>.</p></details>
+        <details class="faq"><summary>How are projections made?</summary>
+          <p>Same rule as the proposed-data Excel: each running work order's CTC and base sales from the base salary month, by days it runs in the
+          projected month (0 if it ends before that month). If the base month's data looks incomplete you get a warning and a one-click option to use the
+          last complete month, e.g. <i>projection of oct-26 using aug-26 data</i>.</p></details>
+        <details class="faq"><summary>Can the chatbot change data?</summary>
+          <p>No. Every query is a checked, read-only SELECT. Only an administrator's <b>Refresh database</b> button reloads the table from the source server, in one all-or-nothing transaction.</p></details>
+        <details class="faq"><summary>What does "AI analysis" mean?</summary>
+          <p>For questions no fixed report covers, the local AI (Ollama) writes a read-only SQL query. It takes longer (up to ~1–2 minutes on this PC). Always check the SQL tab for how it was calculated.</p></details>
+        <details class="faq"><summary>Can I rename columns or stop commas in employee codes? (admin)</summary>
+          <p>Yes — type it in chat, e.g. <i>rename Employee column to Employee code</i>, <i>no commas in employee code</i>,
+          <i>treat work order no as text</i>. It applies to <b>everyone's</b> tables and downloads. <i>show display rules</i> lists them,
+          <i>reset display rules</i> removes them. Only the admin, or people the admin allows (Users → Access), can change them.
+          You can put a rule and a question in the same message.</p></details>
+        <details class="faq"><summary>How do I ask in SQL directly? (admin)</summary>
+          <p>Start the message with <b>/</b>, e.g. <i>/select Category, count(*) from Payrollall1 group by Category</i>.</p></details>
+      </div>
+    </section>
+
+    <!-- ---------- SETTINGS PAGE ---------- -->
+    <section class="page" id="page-settings" hidden>
+      <div class="setgrid">
+        <div class="panel"><h3>Month basis</h3><div class="sub2">When you ask for <b>Aug-26</b>, which rows should count?</div>
+          <label class="radio"><input type="radio" name="mode" value="month_year"><div><b>Liable month (month_year)</b><div class="d">Payment date − 1 month</div></div></label>
+          <label class="radio"><input type="radio" name="mode" value="salary"><div><b>Salary month (Month / Year)</b><div class="d">The month the salary is for</div></div></label>
+          <label class="radio"><input type="radio" name="mode" value="payment"><div><b>Payment month (month_year + 1)</b><div class="d">The month it was paid</div></div></label>
+          <div class="ex" id="modeEx"></div>
+        </div>
+        <div class="panel"><h3>Answers</h3><div class="sub2">How much AI, and what to show. Saved to your account.</div>
+          <div class="switch"><span>AI on every question <small>(smarter, slower)</small></span><input type="checkbox" id="optAI"></div>
+          <div class="switch"><span>Show charts first</span><input type="checkbox" id="optCharts" checked></div>
+          <div class="switch"><span>Hide PF / TDS / PT / ESIC / take-home unless asked</span><input type="checkbox" id="optHide"></div>
+          <div class="switch"><span>Dark mode</span><input type="checkbox" id="optDark"></div>
+        </div>
+        <div class="panel"><h3>Change password</h3><div class="sub2">8+ characters with letters and numbers.</div>
+          <form class="pwgrid" id="pwForm">
+            <input type="password" id="cpCur" placeholder="Current password" autocomplete="current-password">
+            <input type="password" id="cpNew" placeholder="New password" autocomplete="new-password">
+            <input type="password" id="cpNew2" placeholder="Confirm new password" autocomplete="new-password">
+            <button class="btn primary" type="submit" style="text-align:center">Change password</button>
+          </form>
+        </div>
+        <div class="panel" id="valPanel" hidden><h3>Chatbot validity</h3>
+          <div class="sub2">After this date nobody gets answers until you renew it. Only you see this.</div>
+          <div class="ex" id="valNow" style="margin:0 0 10px"></div>
+          <form class="pwgrid" id="valForm" autocomplete="off">
+            <input type="date" id="valDate" required>
+            <input type="password" id="valPw" placeholder="Your password" autocomplete="current-password" required>
+            <button class="btn primary" type="submit" style="text-align:center">Renew</button>
+          </form>
+        </div>
+        <div class="panel" id="dfPanel" hidden><h3>Show data from</h3>
+          <div class="sub2">Everyone — users, admins and the master — sees only months from here on (liable month, month_year). Older rows stay in the table, just hidden.</div>
+          <div class="ex" id="dfNow" style="margin:0 0 10px"></div>
+          <form class="pwgrid" id="dfForm" autocomplete="off">
+            <input type="month" id="dfMonth" required>
+            <button class="btn primary" type="submit" style="text-align:center">Save</button>
+            <button class="btn" type="button" id="dfClear" style="text-align:center">Show all months</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- USERS PAGE (admin) ---------- -->
+    <section class="page" id="page-users" hidden>
+      <div class="panel"><h3>Add a person</h3><div class="sub2">Directors, HODs, CFO, accountants… Give "admin" only to people who manage users and refresh data.</div>
+        <!-- no password box here: the browser filled it with saved passwords (in plain text). The server makes one. -->
+        <form class="form-row" id="addUser" autocomplete="off">
+          <label>User ID<input id="nuId" name="new-person-id" placeholder="e.g. priya.shah" autocapitalize="none" spellcheck="false" autocomplete="off" data-lpignore="true" required></label>
+          <label>Full name<input id="nuName" name="new-person-name" placeholder="Asha Rao (CFO)" autocomplete="off"></label>
+          <label>Role<select id="nuRole"><option value="user">user</option><option value="admin">admin</option></select></label>
+          <button class="btn primary" type="submit">Add user</button>
+        </form>
+      </div>
+      <div class="panel"><h3>People</h3><div class="sub2" id="peopleSub">Only people listed here can sign in. <b>Access</b> sets what each person may see. Reset gives a new temporary password. Disabled people are signed out at once.</div>
+        <div class="tablewrap" style="max-height:none"><table class="utable"><thead><tr><th>ID</th><th>Name</th><th>Role</th><th>Status</th><th>Access</th><th></th></tr></thead><tbody id="userRows"></tbody></table></div>
+      </div>
+      <div class="panel" id="accessPanel" hidden>
+        <h3 id="accTitle">Access</h3><div class="sub2">Applied on the server to every answer, chart, table, download and AI query — the person can't get around it. Takes effect on their next question.</div>
+        <div class="row-actions" style="margin:0 0 14px">
+          <span class="more" style="margin:0 6px 0 0">Quick presets:</span>
+          <button class="btn" data-preset="full">Full access (director / CFO)</button>
+          <button class="btn" data-preset="totals">Totals only — no employee names or salaries</button>
+          <button class="btn" data-preset="nosal">Employee list without salary details</button>
+          <button class="btn" data-preset="none">No data access</button>
+        </div>
+        <div class="setgrid">
+          <div>
+            <div class="switch"><span>Can see payroll data <small>(off = can sign in but sees nothing)</small></span><input type="checkbox" id="acPayroll"></div>
+            <div class="switch"><span>Totals only <small>(no employee-level rows, names, lists, TDS per person)</small></span><input type="checkbox" id="acAgg"></div>
+            <div class="switch"><span>Can see salary details <small id="acSensHint"></small></span><input type="checkbox" id="acSens"></div>
+            <div class="switch"><span>Can change display rules for everyone <small>(column names, "no commas in employee code"…)</small></span><input type="checkbox" id="acDisp"></div>
+            <div class="lbl" style="padding:14px 0 8px">Hide these columns</div>
+            <div class="chkgrid" id="acCols"></div>
+          </div>
+          <div>
+            <div class="lbl" style="padding:0 0 8px">Only these categories <small style="text-transform:none;letter-spacing:0">(none ticked = all)</small></div>
+            <div class="chkgrid" id="acCats"></div>
+            <div class="lbl" style="padding:14px 0 8px">Only these departments <small style="text-transform:none;letter-spacing:0">(none ticked = all)</small></div>
+            <input id="acDepFind" placeholder="Search departments…" class="findbox">
+            <div class="chkgrid deps" id="acDeps"></div>
+          </div>
+        </div>
+        <div class="row-actions"><button class="btn primary" id="acSave">Save access</button><button class="btn" id="acReset">Reset to full access</button><button class="btn" id="acClose">Close</button></div>
+      </div>
+    </section>
+
+    <!-- ---------- ACTIVITY PAGE (admin) ---------- -->
+    <section class="page" id="page-activity" hidden>
+      <div class="panel"><h3>Activity log</h3><div class="sub2">Latest 400 events: sign-ins (with IP), questions, downloads, refreshes, user changes.</div>
+        <div class="tablewrap" style="max-height:640px"><table><thead><tr><th>Time</th><th>User</th><th>Action</th><th>Detail</th></tr></thead><tbody id="actRows"></tbody></table></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ================= TEMPORARY PASSWORD BOX (admin) ================= -->
+  <div class="modal" id="pwModal" hidden role="dialog" aria-modal="true" aria-labelledby="pwmTitle">
+    <div class="mcard">
+      <h3 id="pwmTitle">New temporary password</h3>
+      <div class="sub2" id="pwmSub"></div>
+      <div class="pwrow"><span class="k">User ID</span><span class="v mono" id="pwmId"></span></div>
+      <div class="pwrow"><span class="k">Temporary password</span><span class="v mono big" id="pwmPw"></span></div>
+      <div class="ex">Give these to the person privately. At their first sign-in they must choose their own password —
+        the temporary one then stops working. This box won't be shown again.</div>
+      <div class="row-actions">
+        <button class="btn primary" id="pwmCopy">Copy password</button>
+        <button class="btn" id="pwmCopyMsg">Copy message to send</button>
+        <button class="btn" id="pwmClose">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= INPUT ================= -->
+  <div class="inputbar" id="inputbar">
+    <form class="inputbox" id="askForm">
+      <div class="qwrap"><pre id="qhl" aria-hidden="true"></pre>
+        <textarea id="q" rows="1" placeholder="Ask about salary, CTC, margin, work orders, projections…" spellcheck="false"></textarea></div>
+      <button class="send" id="sendBtn" type="submit" aria-label="Send"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+    </form>
+    <div class="hint" id="hint">Enter to send · Shift+Enter for a new line · read-only, all questions are logged</div>
+    <div class="hint monthhint" title="Salary month = the month the work was done (Month + Year).&#10;Liable month = the month the salary is booked (month_year); it is paid the next month.&#10;Payment month = the month the money is actually paid (liable month + 1)."><span class="mh-long"><b>Salary month</b> = month worked ·
+      <b>Liable month</b> = month booked (paid next month) · <b>Payment month</b> = month paid ·
+      </span>Your answers use <b id="hintMode">Liable month</b> (say “salary month” or “paid in” to change)</div>
+  </div>
+</div>
+
+<script>
+/* ===================== helpers ===================== */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+const inr = (x, d = 2) => {
+  if (x === null || x === undefined || isNaN(x)) return "";
+  const neg = x < 0; let [w, f] = Math.abs(x).toFixed(d).split(".");
+  if (w.length > 3) w = w.slice(0, -3).replace(/\B(?=(\d{2})+(?!\d))/g, ",") + "," + w.slice(-3);
+  return (neg ? "-" : "") + "₹" + w + (d ? "." + f : "");
+};
+const short = x => Math.abs(x) >= 1e7 ? (x < 0 ? "-" : "") + "₹" + (Math.abs(x) / 1e7).toFixed(2) + " Cr" : Math.abs(x) >= 1e5 ? (x < 0 ? "-" : "") + "₹" + (Math.abs(x) / 1e5).toFixed(2) + " L" : inr(x, 0);
+/* markdown-lite: **bold**, *italic*, "- " bullets, line breaks (escaped first, so data can't inject HTML) */
+const md = t => {
+  const lines = esc(t).split("\n"); let out = "", inList = false;
+  for (const l of lines) {
+    const b = l.match(/^\s*[-•]\s+(.*)$/);
+    if (b) { if (!inList) { out += "<ul>"; inList = true; } out += "<li>" + b[1] + "</li>"; continue; }
+    if (inList) { out += "</ul>"; inList = false; }
+    out += l + "<br>";
+  }
+  if (inList) out += "</ul>";
+  return out.replace(/(<br>)+$/, "").replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/(^|[\s(])\*(?!\s)(.+?)\*(?=[\s).,]|$)/g, "$1<i>$2</i>");
+};
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+async function api(path, body, signal) {
+  const opt = body === undefined ? {} : {method: "POST", headers: {"Content-Type": "application/json", "X-Requested-With": "payroll-ui"}, body: JSON.stringify(body)};
+  const r = await fetch(path, {credentials: "same-origin", ...opt, signal});
+  let data = {}; try { data = await r.json(); } catch (e) {}
+  if (r.status === 401 && path !== "/api/login") { showLogin("Your session ended. Please sign in again."); throw new Error("signed out"); }
+  if (!r.ok) throw new Error(data.error || ("Error " + r.status));
+  return data;
+}
+function toast(html, kind = "", ms = 6000) {
+  const t = document.createElement("div"); t.className = "toast " + kind; t.innerHTML = html; document.body.append(t);
+  setTimeout(() => t.remove(), ms); t.onclick = () => t.remove();
+}
+const BOT = `<svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="14" r="12.5" fill="none" stroke="var(--blue)" stroke-width="1.2" style="filter:drop-shadow(0 0 4px var(--blue))"/><circle cx="14" cy="14" r="3.2" fill="var(--purple)" style="filter:drop-shadow(0 0 5px var(--purple))"/></svg>`;
+const MODE_NAME = {month_year: "Liable month", salary: "Salary month", payment: "Payment month"};
+let ME = null;
+
+/* ===================== charts (plain SVG, no library) ===================== */
+function barChart(labels, values, title, color, signed) {
+  const n = labels.length, rowH = 28, W = 760, left = 190, right = 90, H = n * rowH + 30;
+  const min = Math.min(0, ...values), maxv = Math.max(0, ...values);
+  const scale = v => (v - min) / ((maxv - min) || 1) * (W - left - right);
+  const zero = scale(0);
+  const money = /₹|amount|ctc|margin|sales|invoice/i.test(title) && !/%/.test(title);
+  const fmt = v => /%/.test(title) ? v.toFixed(2) + "%" : (money || Math.abs(v) >= 100000) ? short(v) : v.toLocaleString("en-IN");
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(title)}">`;
+  labels.forEach((l, i) => {
+    const y = 10 + i * rowH, v = values[i] ?? 0, x0 = left + Math.min(zero, scale(v)), w = Math.max(2, Math.abs(scale(v) - zero));
+    const c = signed && v < 0 ? css("--bad") : color === "purple" ? css("--purple") : css("--chart");
+    s += `<text x="${left - 10}" y="${y + 17}" text-anchor="end" font-size="12" fill="${css("--muted")}">${esc(String(l).slice(0, 26))}</text>
+      <rect x="${x0}" y="${y + 4}" width="${w}" height="${rowH - 14}" rx="3" fill="${c}"><title>${esc(l)}: ${esc(fmt(v))}</title></rect>
+      <text x="${x0 + w + 6}" y="${y + 17}" font-size="11" font-family="JetBrains Mono, monospace" fill="${css("--text")}">${esc(fmt(v))}</text>`;
+  });
+  return s + `<text x="${left}" y="${H - 4}" font-size="11" fill="${css("--muted")}">${esc(title)}</text></svg>`;
+}
+function lineChart(labels, series) {
+  const W = 760, H = 300, l = 70, r = 40, t = 16, b = 34,
+    colors = [css("--chart"), css("--purple"), css("--chart3"), "#22c55e", "#f59e0b", "#ec4899"];
+  const all = series.flatMap(s => s.values).filter(v => v !== null), lo = Math.min(...all), hi = Math.max(...all);
+  const max = hi + (hi - lo) * 0.08 || 1, min = lo >= 0 ? Math.max(0, lo - (hi - lo) * 0.08) : lo * 1.08;
+  const X = i => l + i * (W - l - r) / Math.max(1, labels.length - 1), Yp = v => t + (max - v) / ((max - min) || 1) * (H - t - b);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Monthly trend">`;
+  for (let k = 0; k <= 4; k++) {
+    const v = min + (max - min) * k / 4, y = Yp(v);
+    s += `<line x1="${l}" x2="${W - r}" y1="${y}" y2="${y}" stroke="${css("--line")}"/><text x="${l - 8}" y="${y + 4}" text-anchor="end" font-size="11" fill="${css("--muted")}">${short(v)}</text>`;
+  }
+  labels.forEach((m, i) => s += `<text x="${X(i)}" y="${H - 10}" text-anchor="middle" font-size="11" fill="${css("--muted")}">${esc(m)}</text>`);
+  const C = k => colors[k % colors.length];
+  series.forEach((se, k) => {
+    s += `<polyline fill="none" stroke="${C(k)}" stroke-width="2" points="${se.values.map((v, i) => X(i) + "," + Yp(v ?? 0)).join(" ")}"/>`;
+    se.values.forEach((v, i) => s += `<circle cx="${X(i)}" cy="${Yp(v ?? 0)}" r="3" fill="${css("--surface")}" stroke="${C(k)}" stroke-width="2"><title>${esc(se.name)} ${esc(labels[i])}: ${inr(v, 0)}</title></circle>`);
+  });
+  s += `</svg><div class="legend">${series.map((se, k) => `<span style="--c:${C(k)}">${esc(se.name)}</span>`).join("")}</div>`;
+  return s;
+}
+function renderChart(c) {
+  if (!c) return '<span style="color:var(--muted)">No chart for this answer — see the Table tab.</span>';
+  if (c.type === "line") return lineChart(c.labels, c.series);
+  return barChart(c.labels, c.values, c.title, c.color, c.signed);
+}
+
+/* ===================== rendering ===================== */
+function hlSql(sql) {
+  return esc(sql).replace(/(&#39;[^&]*?&#39;)/g, '<span class="s">$1</span>')
+    .replace(/\b(SELECT|FROM|WHERE|GROUP BY|ORDER BY|AS|AND|OR|ON|TOP|OVER|PARTITION BY|DESC|ASC|CASE|WHEN|THEN|END|DISTINCT|WITH|IN|LIKE|BETWEEN|IS|NULL|NOT|JOIN|LEFT|HAVING)\b/g, '<span class="k">$1</span>')
+    .replace(/\b(SUM|COUNT|MAX|MIN|AVG|ROUND|YEAR|MONTH|DATEADD|DATEFROMPARTS|FORMAT|ISNULL|NULLIF)\(/g, '<span class="f">$1</span>(')
+    .replace(/(\[[^\]]+\])/g, '<span class="c">$1</span>');
+}
+/* SSMS-like colouring for "/" SQL while typing and in the sent bubble */
+const SQL_KW = new Set(("select from where group by order having join inner left right full outer cross on as and or not in is " +
+  "null like between case when then else end top distinct with union all asc desc over partition exists any some percent ties " +
+  "offset fetch next rows only cast convert").split(" "));
+const SQL_FN = new Set(("count sum avg min max round format datefromparts eomonth isnull nullif coalesce year month day datediff " +
+  "dateadd getdate len ltrim rtrim upper lower replace substring charindex row_number rank dense_rank lag lead abs floor " +
+  "ceiling string_agg concat iif try_cast try_convert").split(" "));
+const SQL_BAD = new Set(("delete drop truncate update insert merge alter create rename exec execute grant revoke deny shutdown " +
+  "kill backup restore dbcc bulk into openrowset openquery opendatasource openxml waitfor reconfigure declare set use go").split(" "));
+function hlTyping(text) {
+  const slash = text.startsWith("/"), body = slash ? text.slice(1) : text;
+  let out = slash ? '<span class="hl-slash">/</span>' : "";
+  const re = /(--[^\n]*|\/\*[\s\S]*?(?:\*\/|$))|('(?:[^']|'')*'?)|(\[[^\]\n]*\]?)|(\b\d+(?:\.\d+)?\b)|([A-Za-z_][A-Za-z0-9_]*)|(\s+)|([^\sA-Za-z0-9_'\[]+)/g;
+  let m;
+  while ((m = re.exec(body)) !== null) {
+    const [t, com, str, br, num, word, ws, op] = m;
+    if (com || (op && /;|@/.test(op))) out += `<span class="hl-bad">${esc(t)}</span>`;
+    else if (str) out += `<span class="hl-s">${esc(t)}</span>`;
+    else if (br) out += `<span class="${/payrollall/i.test(br) ? "hl-t" : "hl-c"}">${esc(t)}</span>`;
+    else if (num) out += `<span class="hl-n">${esc(t)}</span>`;
+    else if (word) {
+      const w = word.toLowerCase();
+      out += SQL_BAD.has(w) ? `<span class="hl-bad">${esc(t)}</span>` : SQL_KW.has(w) ? `<span class="hl-k">${esc(t)}</span>` :
+        SQL_FN.has(w) ? `<span class="hl-f">${esc(t)}</span>` : /^payrollall1?$/.test(w) ? `<span class="hl-t">${esc(t)}</span>` :
+        `<span class="hl-c">${esc(t)}</span>`;
+    } else if (ws) out += esc(t);
+    else out += `<span class="hl-o">${esc(t)}</span>`;
+  }
+  return out;
+}
+function fmtCell(v, k) {
+  if (v === null || v === undefined) return "";
+  if (typeof v !== "number") return esc(v);
+  if (k === "money") return inr(v);
+  if (k === "pct") return v.toFixed(2) + "%";
+  return v.toLocaleString("en-IN");
+}
+function tableHtml(t) {
+  const num = t.kinds.map(k => k !== "text");
+  return `<div class="tablewrap"><table><thead><tr>${t.cols.map((c, i) => `<th class="${num[i] ? "n" : ""}">${esc(c)}</th>`).join("")}</tr></thead><tbody>${
+    t.rows.map(r => `<tr>${r.map((v, i) => `<td class="${num[i] ? "n" : ""}${typeof v === "number" && v < 0 ? " neg" : ""}">${fmtCell(v, t.kinds[i])}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+}
+const toCsv = t => "﻿" + [t.cols, ...t.rows].map(r => r.map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(",")).join("\r\n");
+function saveBlob(blob, name) { const u = URL.createObjectURL(blob), x = document.createElement("a"); x.href = u; x.download = name; x.click(); setTimeout(() => URL.revokeObjectURL(u), 1000); }
+const fname = q => (String(q || "result").replace(/[^A-Za-z0-9]+/g, "_").slice(0, 40).replace(/^_|_$/g, "") || "result") + ".csv";
+function downloadAnswer(a) {
+  if (a.id && a.table && a.table.total > a.table.rows.length) { window.location = "/api/csv/" + a.id; return; }   // all rows from the server
+  saveBlob(new Blob([toCsv(a.table)], {type: "text/csv"}), fname(a.question));
+}
+/* "CSV with analysis": what the chat shows (answer, KPI tiles, insights, notes) above the table */
+function analysisCsv(a) {
+  const plain = s => String(s || "").replace(/\*\*|__|`/g, "").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").trim();
+  const out = [["Question", a.question || ""], [""], ["Answer"]];
+  plain(a.text).split(/\r?\n/).filter(l => l.trim()).forEach(l => out.push([l.trim()]));
+  if (a.kpis && a.kpis.length) { out.push([""], ["Key figures"]); a.kpis.forEach(k => out.push([plain(k[0]), plain(k[1])])); }
+  const ins = plain(a.explain || a.explain_ai);
+  if (ins) { out.push([""], ["Insights"]); ins.split(/\r?\n/).filter(l => l.trim()).forEach(l => out.push([l.trim()])); }
+  const note = plain([a.note, a.time].filter(Boolean).join(" · "));
+  if (note) out.push([""], ["Notes", note]);
+  out.push([""], ["Table"]);
+  const cell = v => String(v ?? "").replace(/^[-*]\s+/, "• ").replace(/^([=+\-@])/, "'$1");   // Excel: no formulas
+  return out.map(r => r.map(v => `"${cell(v).replace(/"/g, '""')}"`).join(",")).join("\r\n");
+}
+async function downloadWithAnalysis(a) {
+  let tbl;
+  if (a.id && a.table && a.table.total > a.table.rows.length) {               // all rows from the server
+    const r = await fetch("/api/csv/" + a.id, {credentials: "same-origin"});
+    if (!r.ok) { let m = "Download failed."; try { m = (await r.json()).error || m; } catch (e) {} toast(esc(m), "bad"); return; }
+    tbl = (await r.text()).replace(/^﻿/, "");
+  } else tbl = toCsv(a.table).replace(/^﻿/, "");
+  saveBlob(new Blob(["﻿" + analysisCsv(a) + "\r\n" + tbl], {type: "text/csv"}),
+           fname(a.question).replace(/\.csv$/, "_with_analysis.csv"));
+}
+
+function addAnswer(a, job) {
+  const hasData = a.table && a.table.rows && a.table.rows.length;
+  const el = document.createElement("div"); el.className = "amsg"; el._a = a;
+  const charts = $("#optCharts").checked && a.chart;
+  const insight = a.explain || "";
+  el.innerHTML = `<div class="ahead"><div>${BOT}</div><div class="tx">${a.text ? md(a.text) : (a.report === "chat_ai" ? '<span class="typing"><i></i><i></i><i></i></span> <span style="color:var(--muted)">Writing…</span>' : "")}</div>${hasData ? '<span class="live">live data</span>' : ""}</div>
+    ${a.kpis && a.kpis.length ? `<div class="kpis">${a.kpis.map(k => `<div class="kpi" title="${esc(k[2] || "")}"><div class="l">${esc(k[0])}</div><div class="v">${esc(k[1])}</div></div>`).join("")}</div>` : ""}
+    ${hasData ? `<div class="tabs" role="tablist">
+        ${["Chart", "Table", "SQL", "Insights"].map((n, i) => `<button role="tab" data-i="${i}" class="${i === (charts ? 0 : 1) ? "on" : ""}">${n}</button>`).join("")}</div>
+      <div class="pane chart" ${charts ? "" : "hidden"}>${charts ? renderChart(a.chart) : ""}</div>
+      <div class="pane" ${charts ? "hidden" : ""}>${tableHtml(a.table)}
+        ${a.table.total > a.table.rows.length ? `<div class="more">Showing ${a.table.rows.length.toLocaleString("en-IN")} of ${a.table.total.toLocaleString("en-IN")} rows — the download has all of them.</div>` : ""}
+        <div class="row-actions"><button class="btn" data-dl>Download CSV</button><button class="btn" data-dla>CSV with analysis</button></div></div>
+      <div class="pane" hidden><div class="sql">${hlSql(a.sql || "")}</div>${a.params && a.params.length ? `<div class="more">Parameters: ${esc(a.params.join(" · "))}</div>` : ""}
+        <div class="row-actions"><button class="btn" data-copy>Copy SQL</button></div></div>
+      <div class="pane ins" hidden>${insight ? md(insight) : ""}<div class="aiins"></div>${!insight && !a.explain_pending ? '<span style="color:var(--muted)">Add <i>explain</i> or <i>why</i> to your question for a written analysis.</span>' : ""}</div>` : ""}
+    ${a.options && a.options.length ? `<div class="opts">${a.options.map(o => `<button class="btn" data-ask="${esc(o)}">${esc(o)}</button>`).join("")}</div>` : ""}
+    ${a.note || a.time ? `<div class="note">${a.time ? `<span class="timechip">${esc(a.time)}</span>` : ""}${md(a.note || "")}</div>` : ""}`;
+  el.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
+    el.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x === b));
+    el.querySelectorAll(".pane").forEach((p, i) => {
+      p.hidden = i !== +b.dataset.i;
+      if (i === 0 && !p.hidden && !p.innerHTML) p.innerHTML = renderChart(a.chart);
+    });
+  });
+  const dl = el.querySelector("[data-dl]"); if (dl) dl.onclick = () => downloadAnswer(a);
+  const dla = el.querySelector("[data-dla]"); if (dla) dla.onclick = () => downloadWithAnalysis(a).catch(e => toast(esc(e.message), "bad"));
+  const cp = el.querySelector("[data-copy]");
+  if (cp) cp.onclick = () => { (navigator.clipboard ? navigator.clipboard.writeText(a.sql) : Promise.reject()).catch(() => {}); cp.textContent = "Copied ✓"; setTimeout(() => cp.textContent = "Copy SQL", 1500); };
+  el.querySelectorAll("[data-ask]").forEach(b => b.onclick = () => ask(b.dataset.ask, true));
+  if (a.explain_pending && a.id) el._explain = loadExplain(a, el, a.report === "chat_ai" ? job : null);
+  return el;
+}
+async function loadExplain(a, el, job) {
+  const box = a.report === "chat_ai" ? el.querySelector(".tx") : el.querySelector(".aiins");
+  if (!box) return;
+  if (a.report !== "chat_ai") box.innerHTML = '<div class="more"><span class="typing"><i></i><i></i><i></i></span> AI is writing the analysis… (can take a minute)</div>';
+  try {
+    const r = await api("/api/explain/" + a.id + (job ? "?rid=" + job.rid : ""), undefined, job && job.ctl.signal);
+    if (r.stopped) throw new DOMException("Stopped", "AbortError");
+    if (r.text) a.explain_ai = r.text;                  // kept for "CSV with analysis"
+    box.innerHTML = r.text ? (a.report === "chat_ai" ? md(r.text) : "<div style='margin-top:10px'>" + md(r.text) + "</div>") : `<span style="color:var(--muted)">${esc(r.error || "No analysis.")}</span>`;
+    if (a.report !== "chat_ai") { const t = el.querySelectorAll(".tabs button")[3]; if (t) t.textContent = "Insights ✦"; }
+  } catch (e) { box.innerHTML = e.name === "AbortError" ? STOPPED : `<span style="color:var(--muted)">${esc(e.message)}</span>`; }
+}
+
+const DOCS = [];
+let BUSY = false, ASK = null;                 // ASK: the running question {rid, ctl} the Stop button / Esc can stop
+const ICO_SEND = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>`;
+const ICO_STOP = `<svg width="14" height="14" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2.5" fill="currentColor"/></svg>`;
+const STOPPED = `<span style="color:var(--muted)">⏹ Stopped.</span>`;
+function sendMode(busy) {
+  const b = $("#sendBtn");
+  b.innerHTML = busy ? ICO_STOP : ICO_SEND; b.classList.toggle("stop", busy);
+  b.setAttribute("aria-label", busy ? "Stop" : "Send"); b.title = busy ? "Stop (Esc)" : "";
+}
+function stopAsk() {
+  if (!ASK || ASK.ctl.signal.aborted) return;
+  ASK.ctl.abort();                            // the page stops waiting at once
+  api("/api/stop", {rid: ASK.rid}).catch(() => {});   // the server cancels the AI / SQL work
+}
+async function ask(q, fromOption = false) {
+  q = String(q || "").trim(); if (!q || BUSY) return;
+  go("chat");
+  const job = ASK = {rid: Date.now().toString(36) + Math.random().toString(36).slice(2, 10), ctl: new AbortController()};
+  BUSY = true; sendMode(true);
+  const chat = $("#chat"), u = document.createElement("div");
+  u.className = "umsg";
+  u.innerHTML = `<div class="b">${q.startsWith("/") ? `<div class="sqlbadge">SQL</div><pre class="sqlq">${hlTyping(q)}</pre>` : esc(q)}</div>`;
+  chat.append(u);
+  const wait = document.createElement("div"); wait.className = "amsg";
+  wait.innerHTML = `<div class="ahead"><div>${BOT}</div><div class="tx"><span class="typing"><i></i><i></i><i></i></span> &nbsp;<span style="color:var(--muted)" class="wt">Thinking…</span></div></div>`;
+  chat.append(wait);
+  $("#newChat").hidden = false; $("#tip").hidden = true; $("#intro").hidden = true;
+  wait.scrollIntoView({behavior: "smooth", block: "end"});
+  const t0 = Date.now(), timer = setInterval(() => {
+    const s = Math.round((Date.now() - t0) / 1000), w = wait.querySelector(".wt");
+    if (w && s >= 6) w.textContent = s < 25 ? `Working… ${s}s` : `The AI is writing a query for this one… ${s}s (can take up to 2 minutes)`;
+  }, 1000);
+  try {
+    const a = await api("/api/ask", {q, from_option: fromOption, rid: job.rid}, job.ctl.signal);
+    if (a.stopped) throw new DOMException("Stopped", "AbortError");
+    if (a.table && a.table.rows.length) DOCS.unshift(a);
+    const el = addAnswer(a, job); wait.replaceWith(el);
+    el.scrollIntoView({behavior: "smooth", block: "start"});
+    if (a.report === "chat_ai" && el._explain) await el._explain;    // the AI reply is the answer: Stop still works
+  } catch (e) {
+    wait.querySelector(".tx").innerHTML = e.name === "AbortError" ? STOPPED : `<span style="color:var(--bad)">${esc(e.message)}</span>`;
+  } finally {
+    clearInterval(timer); BUSY = false; ASK = null; sendMode(false); $("#q").focus();
+  }
+}
+
+/* ===================== pages ===================== */
+const NAMES = {chat: "Chat", history: "History", tds: "TDS calculator", documents: "Documents", faq: "Knowledgebase", settings: "Settings", users: "Users", activity: "Activity log"};
+function go(p) {
+  if (p === "users" && (!ME || ME.role === "user")) p = "chat";
+  if (p === "activity" && (!ME || ME.role !== "master")) p = "chat";
+  document.querySelectorAll(".page").forEach(s => s.hidden = s.id !== "page-" + p);
+  document.querySelectorAll("#nav button, #nav2 button").forEach(b => b.classList.toggle("on", b.dataset.page === p));
+  $("#crumb").innerHTML = "Payroll / <b>" + esc(NAMES[p]) + "</b>";
+  $("#inputbar").hidden = p !== "chat";
+  $("#aiBtn").hidden = p !== "chat";
+  $("#app").classList.remove("open");
+  if (p === "history") loadHistory();
+  if (p === "tds") loadTds();
+  if (p === "documents") $("#docList").innerHTML = DOCS.length ? DOCS.map((a, i) =>
+    `<div class="hist"><div><b>${esc(a.question)}</b><div class="w">${a.table.total.toLocaleString("en-IN")} row(s)</div></div><button class="btn" data-doc="${i}">CSV</button></div>`).join("")
+    : '<div style="color:var(--muted)">No results yet. Answers with tables from <b>Chat</b> will appear here for download.</div>';
+  if (p === "users") loadUsers();
+  if (p === "settings" && ME && ME.role === "master") loadValidity();
+  if (p === "activity") loadActivity();
+}
+async function loadHistory() {
+  $("#histList").innerHTML = '<div style="color:var(--muted)">Loading…</div>';
+  try {
+    const r = await api("/api/history");
+    $("#histList").innerHTML = r.items.length ? r.items.map(x =>
+      `<div class="hist"><a href="#" data-ask="${esc(x.q)}">${esc(x.q)}</a><span><span class="w">${esc(x.time.slice(0, 16))}</span><button class="x" title="Remove from my list" data-hide="${esc(x.q)}">×</button></span></div>`).join("")
+      : '<div style="color:var(--muted)">No questions yet.</div>';
+  } catch (e) { $("#histList").innerHTML = `<div style="color:var(--bad)">${esc(e.message)}</div>`; }
+}
+$("#histList").onclick = async e => {
+  const h = e.target.closest("[data-hide]");
+  if (h) { await api("/api/history/hide", {q: h.dataset.hide}); loadHistory(); return; }
+  const a = e.target.closest("[data-ask]"); if (a) { e.preventDefault(); ask(a.dataset.ask); }
+};
+$("#histClear").onclick = async () => { if (confirm("Clear your question list? (The administrator's activity log is kept.)")) { await api("/api/history/hide", {all: true}); loadHistory(); } };
+/* ---------- TDS calculator ---------- */
+const rs = v => v == null ? "–" : "₹" + Math.round(v).toLocaleString("en-IN");
+const RG = {new: "New", old: "Old"};
+let TDS_ITEMS = [];
+function tdsCard(x) {
+  const other = x.regime === "new" ? "old" : "new", o = x[other];
+  const kpi = (l, v, t = "") => `<div class="kpi" title="${esc(t)}"><div class="l">${esc(l)}</div><div class="v">${esc(v)}</div></div>`;
+  return `<div class="kpis">
+      ${kpi("Yearly TDS (" + RG[x.regime] + ")", rs(x.yearly_tds), "TDS already paid + proposed TDS")}
+      ${kpi("TDS already paid", rs(x.tds_paid))}
+      ${kpi("Proposed TDS", rs(x.proposed_tds), "Still to deduct this FY")}
+      ${kpi("Monthly TDS", x.months ? rs(x.monthly_tds) : "–", x.months + " pending month(s)")}</div>
+    <div class="note">
+      <b>${RG[x.regime]} regime</b> · ${esc(x.fy)} · salary ${rs(x.paid)} paid + ${rs(x.proposed)} proposed = <b>${rs(x.total)}</b>
+      − standard deduction ${rs(x.std_deduction)} = taxable ${rs(x.taxable)}.<br>
+      Yearly TDS ${rs(x.yearly_tds)} = already paid ${rs(x.tds_paid)} + proposed ${rs(x.proposed_tds)}${x.excess_paid ? ` (already paid <b>${rs(x.excess_paid)} more</b> than the yearly tax → no more TDS)` : ""};
+      ${x.months ? `proposed ${rs(x.proposed_tds)} ÷ ${x.months} pending month(s) = <b>${rs(x.monthly_tds)} a month</b>.` : "no pending months → no monthly figure."}<br>
+      If <b>${RG[other]} regime</b>: yearly ${rs(o.yearly_tds)}, proposed ${rs(o.proposed_tds)}${x.months ? `, monthly ${rs(o.monthly_tds)}` : ""}.
+      ${x[other].yearly_tds === x.yearly_tds ? "Both regimes give the same TDS." : `<b>${RG[x.lower]} regime is lower</b> by ${rs(Math.abs(x.yearly_tds - o.yearly_tds))} a year.`}
+      ${x.surcharge_note ? "<br>⚠️ Salary above ₹50 lakh: surcharge is not included (same as the SQL calculation)." : ""}</div>`;
+}
+async function loadTds() {
+  $("#tdsList").innerHTML = '<div style="color:var(--muted)">Loading…</div>';
+  try {
+    const r = await api("/api/tds");
+    TDS_ITEMS = r.items;
+    $("#tdsFy").textContent = "· " + r.fy;
+    if ($("#tdsMonths").value === "") $("#tdsMonths").value = r.months;
+    $("#tdsList").innerHTML = r.items.length ? r.items.map((x, i) =>
+      `<div class="hist"><a href="#" data-tds="${i}">${RG[x.regime]} · paid ${rs(x.paid)} + proposed ${rs(x.proposed)} → yearly ${rs(x.yearly_tds)}, monthly ${x.months ? rs(x.monthly_tds) : "–"}</a><span><span class="w">${esc(x.time.slice(0, 16))}</span><button class="x" title="Delete" data-del="${esc(x.id)}">×</button></span></div>`).join("")
+      : '<div style="color:var(--muted)">No calculations yet.</div>';
+  } catch (e) { $("#tdsList").innerHTML = `<div style="color:var(--bad)">${esc(e.message)}</div>`; }
+}
+$("#tdsForm").onsubmit = async e => {
+  e.preventDefault();
+  try {
+    const r = await api("/api/tds", {paid: $("#tdsPaid").value, proposed: $("#tdsProp").value, regime: $("#tdsRegime").value,
+                                      tds_paid: $("#tdsPaidTds").value, months: $("#tdsMonths").value});
+    $("#tdsResult").innerHTML = tdsCard(r.item);
+    loadTds();
+  } catch (err) { $("#tdsResult").innerHTML = `<div class="note" style="color:var(--bad)">${esc(err.message)}</div>`; }
+};
+$("#tdsList").onclick = async e => {
+  const d = e.target.closest("[data-del]");
+  if (d) { await api("/api/tds/delete", {id: d.dataset.del}); loadTds(); return; }
+  const a = e.target.closest("[data-tds]"); if (!a) return;
+  e.preventDefault();
+  const x = TDS_ITEMS[+a.dataset.tds];
+  $("#tdsPaid").value = x.paid; $("#tdsProp").value = x.proposed; $("#tdsRegime").value = x.regime;
+  $("#tdsPaidTds").value = x.tds_paid || ""; $("#tdsMonths").value = x.months;
+  $("#tdsResult").innerHTML = tdsCard(x);
+};
+$("#runForm").onsubmit = async e => {
+  e.preventDefault();
+  const m = $("#runMonth").value.trim().replace(/[^A-Za-z0-9 \-\/']/g, "").slice(0, 20);
+  const box = $("#runResult"), btn = e.target.querySelector("button");
+  box.innerHTML = '<div class="note"><span class="typing"><i></i><i></i><i></i></span> Building the list…</div>'; btn.disabled = true;
+  try {
+    const a = await api("/api/ask", {q: "salary run" + (m ? " for " + m : ""), from_option: true});
+    if (a.table && a.table.rows.length) DOCS.unshift(a);
+    box.innerHTML = ""; box.append(addAnswer(a));
+  } catch (err) { box.innerHTML = `<div class="note" style="color:var(--bad)">${esc(err.message)}</div>`; }
+  finally { btn.disabled = false; }
+};
+$("#tdsClear").onclick = async () => { if (TDS_ITEMS.length && confirm("Delete all your TDS calculations? This can't be undone.")) { await api("/api/tds/delete", {all: true}); $("#tdsResult").innerHTML = ""; loadTds(); } };
+$("#docList").onclick = e => { const b = e.target.closest("[data-doc]"); if (b) downloadAnswer(DOCS[+b.dataset.doc]); };
+$("#nav").onclick = e => { const b = e.target.closest("button"); if (b) go(b.dataset.page); };
+$("#nav2").onclick = e => { const b = e.target.closest("button"); if (b) go(b.dataset.page); };
+$("#menuBtn").onclick = () => $("#app").classList.toggle("open");
+
+/* ---------- admin: users ---------- */
+async function loadUsers() {
+  const tb = $("#userRows"); tb.innerHTML = '<tr><td colspan="6" style="color:var(--muted)">Loading…</td></tr>';
+  try {
+    const r = await api("/api/admin/users");
+    const master = r.my_role === "master";
+    $("#peopleSub").innerHTML = master
+      ? "Only people listed here can sign in. <b>Access</b> sets what each person may see. Reset gives a new temporary password. Disabled people are signed out at once."
+      : "Only people listed here can sign in. You can <b>add new users</b>. Only the master administrator can reset passwords, disable, delete, rename or change roles.";
+    tb.innerHTML = r.users.map(u => `<tr>
+      <td class="mono">${esc(u.id)}${u.id === r.me ? " <span class='pill'>you</span>" : ""}</td><td>${esc(u.name)}</td>
+      <td><span class="pill ${u.role === "user" ? "" : "admin"}">${esc(u.role)}</span></td>
+      <td>${u.active ? `<span class="pill on">${u.online ? "online" : "active"}</span>` : '<span class="pill off">disabled</span>'}${u.must_change ? " <span class='pill'>temp pw</span>" : ""}</td>
+      <td class="acc">${esc(u.access)}</td>
+      <td>${(!master || u.id === r.me || u.role === "master") ? "" : `${u.role === "user" ? `<button class="btn" data-access="${esc(u.id)}">Access</button>` : ""}<button class="btn" data-act="rename" data-id="${esc(u.id)}" data-name="${esc(u.name)}">Edit name</button><button class="btn" data-act="reset" data-id="${esc(u.id)}">Reset password</button><button class="btn" data-act="toggle" data-id="${esc(u.id)}">${u.active ? "Disable" : "Enable"}</button>${u.online ? `<button class="btn" data-act="signout" data-id="${esc(u.id)}">Sign out</button>` : ""}<button class="btn" data-act="role" data-id="${esc(u.id)}" data-role="${u.role === "admin" ? "user" : "admin"}">Make ${u.role === "admin" ? "user" : "admin"}</button><button class="btn" data-act="delete" data-id="${esc(u.id)}">Delete</button>`}</td></tr>`).join("");
+    const roleSel = $("#nuRole");                       // admins may add users only
+    roleSel.querySelector('option[value="admin"]').hidden = !master;
+    if (!master) roleSel.value = "user";
+    roleSel.disabled = !master;
+  } catch (e) { tb.innerHTML = `<tr><td colspan="6" style="color:var(--bad)">${esc(e.message)}</td></tr>`; }
+}
+/* ---------- admin: what each person may see ---------- */
+let ACC = null;
+const chk = (name, val, label, on) => `<label><input type="checkbox" name="${name}" value="${esc(val)}" ${on ? "checked" : ""}>${esc(label)}</label>`;
+const ticked = name => [...document.querySelectorAll(`#accessPanel input[name="${name}"]:checked`)].map(i => i.value);
+async function openAccess(uid) {
+  try {
+    ACC = await api("/api/admin/access/" + encodeURIComponent(uid));
+    const p = ACC.policy, o = ACC.options;
+    $("#accTitle").textContent = `Access — ${ACC.name} (${ACC.id})`;
+    $("#acPayroll").checked = p.payroll_access; $("#acAgg").checked = p.aggregated_only; $("#acSens").checked = p.sensitive_access;
+    $("#acDisp").checked = p.display_rules;
+    $("#acSensHint").textContent = "(" + o.sensitive.slice(0, 8).join(", ") + "…)";
+    $("#acCols").innerHTML = o.columns.map(c => chk("col", c.key, c.label, p.blocked_columns.includes(c.key))).join("");
+    $("#acCats").innerHTML = o.categories.map(c => chk("cat", c, c, p.categories.includes(c))).join("");
+    $("#acDeps").innerHTML = o.departments.map(c => chk("dep", c, c, p.departments.includes(c))).join("");
+    $("#acDepFind").value = "";
+    $("#accessPanel").hidden = false; $("#accessPanel").scrollIntoView({behavior: "smooth", block: "start"});
+  } catch (e) { toast(esc(e.message), "bad"); }
+}
+$("#acDepFind").oninput = e => { const t = e.target.value.toLowerCase(); $("#acDeps").querySelectorAll("label").forEach(l => l.hidden = !l.textContent.toLowerCase().includes(t)); };
+const PRESETS = {
+  full: {payroll: true, agg: false, sens: true, cols: []},
+  totals: {payroll: true, agg: true, sens: false, cols: ["Name", "Employee"]},
+  nosal: {payroll: true, agg: false, sens: false, cols: []},
+  none: {payroll: false, agg: false, sens: true, cols: []}};
+document.querySelectorAll("[data-preset]").forEach(b => b.onclick = () => {
+  const p = PRESETS[b.dataset.preset];
+  $("#acPayroll").checked = p.payroll; $("#acAgg").checked = p.agg; $("#acSens").checked = p.sens;
+  document.querySelectorAll('#acCols input').forEach(i => i.checked = p.cols.includes(i.value));
+  toast("Preset filled in — press <b>Save access</b> to apply.", "", 3000);
+});
+$("#acSave").onclick = async () => {
+  try {
+    const r = await api("/api/admin/access", {id: ACC.id, payroll_access: $("#acPayroll").checked, aggregated_only: $("#acAgg").checked,
+      sensitive_access: $("#acSens").checked, display_rules: $("#acDisp").checked, blocked_columns: ticked("col"), categories: ticked("cat"), departments: ticked("dep")});
+    toast(esc(r.message), "good", 8000); loadUsers(); openAccess(ACC.id);
+  } catch (e) { toast(esc(e.message), "bad"); }
+};
+$("#acReset").onclick = async () => {
+  if (!confirm(`Give ${ACC.id} full access again (remove all restrictions)?`)) return;
+  try { const r = await api("/api/admin/access", {id: ACC.id, reset: true}); toast(esc(r.message), "good"); loadUsers(); openAccess(ACC.id); }
+  catch (e) { toast(esc(e.message), "bad"); }
+};
+$("#acClose").onclick = () => { $("#accessPanel").hidden = true; };
+
+$("#userRows").onclick = async e => {
+  const ac = e.target.closest("[data-access]"); if (ac) { openAccess(ac.dataset.access); return; }
+  const b = e.target.closest("[data-act]"); if (!b) return;
+  const {act, id, role} = b.dataset;
+  let name;
+  if (act === "rename") {
+    name = prompt(`New name for ${id}:`, b.dataset.name || "");
+    if (!name || !name.trim()) return;
+  } else {
+    const ask_ = {reset: `Give ${id} a new temporary password?`, toggle: `${b.textContent} ${id}?`, role: `Make ${id} ${role}?`, delete: `Delete ${id}? This cannot be undone.`, signout: `Sign ${id} out now?`}[act];
+    if (!confirm(ask_)) return;
+  }
+  try {
+    const r = await api("/api/admin/users", {action: act, id, role, name});
+    if (r.password) showPassword(r); else toast(esc(r.message), "good", 6000);
+    loadUsers();
+  } catch (err) { toast(esc(err.message), "bad"); }
+};
+function showPassword(r) {                    // stays until the admin closes it; nothing disappears while copying
+  $("#pwmTitle").textContent = r.kind === "added" ? "Person added" : "Password reset";
+  $("#pwmSub").textContent = r.kind === "added" ? `${r.name} can now sign in.` : `${r.name} — their old password and any open sign-in no longer work.`;
+  $("#pwmId").textContent = r.id; $("#pwmPw").textContent = r.password;
+  $("#pwModal").hidden = false; $("#pwmCopy").focus();
+  const copy = (text, btn, label) => {
+    const done = () => { btn.textContent = "Copied ✓"; setTimeout(() => btn.textContent = label, 1600); };
+    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(done, () => fallback(text, done));
+    else fallback(text, done);
+  };
+  const fallback = (text, done) => {          // http:// pages can't use the clipboard API - use a hidden box
+    const t = document.createElement("textarea"); t.value = text; t.style.position = "fixed"; t.style.opacity = "0";
+    document.body.append(t); t.select(); try { document.execCommand("copy"); done(); } catch (e) {} t.remove();
+  };
+  $("#pwmCopy").onclick = () => copy(r.password, $("#pwmCopy"), "Copy password");
+  $("#pwmCopyMsg").onclick = () => copy(`Payroll AI Assistant: ${location.origin}\nUser ID: ${r.id}\nTemporary password: ${r.password}\n` +
+    `You will be asked to set your own password when you first sign in.`, $("#pwmCopyMsg"), "Copy message to send");
+}
+$("#pwmClose").onclick = () => { $("#pwModal").hidden = true; $("#pwmPw").textContent = ""; };
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#pwModal").hidden) $("#pwmClose").click(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && BUSY && $("#pwModal").hidden) { e.preventDefault(); stopAsk(); } });
+$("#sendBtn").onclick = e => { if (BUSY) { e.preventDefault(); stopAsk(); } };   // while answering, the send button is Stop
+$("#addUser").onsubmit = async e => {
+  e.preventDefault();
+  try {
+    const r = await api("/api/admin/users", {action: "add", id: $("#nuId").value, name: $("#nuName").value, role: $("#nuRole").value});
+    showPassword(r); e.target.reset(); loadUsers();
+  } catch (err) { toast(esc(err.message), "bad"); }
+};
+async function loadActivity() {
+  const tb = $("#actRows"); tb.innerHTML = '<tr><td colspan="4" style="color:var(--muted)">Loading…</td></tr>';
+  try {
+    const r = await api("/api/admin/activity");
+    tb.innerHTML = r.items.map(x => `<tr><td class="mono">${esc(x.time)}</td><td>${esc(x.user)}</td><td>${esc(x.action)}</td><td style="white-space:normal;min-width:260px">${esc(x.detail)}</td></tr>`).join("");
+  } catch (e) { tb.innerHTML = `<tr><td colspan="4" style="color:var(--bad)">${esc(e.message)}</td></tr>`; }
+}
+
+/* ---------- settings ---------- */
+const EX = {month_year: "<b>Aug-26</b> = everything <b>liable in August</b> (payment date − 1 month, e.g. paid 07-Sep-26 → 07-Aug-26).",
+  salary: "<b>Aug-26</b> = salary <b>for</b> August (Month = 8, Year = 2026), even if it was paid later.",
+  payment: "<b>Aug-26</b> = everything <b>paid in August</b> (= liable month Jul-26)."};
+function showMode(m) { $("#modeEx").innerHTML = EX[m] || ""; $("#sideMode").textContent = MODE_NAME[m] || m; $("#hintMode").textContent = MODE_NAME[m] || m;const r = document.querySelector(`input[name="mode"][value="${m}"]`); if (r) r.checked = true; }
+document.querySelectorAll('input[name="mode"]').forEach(r => r.onchange = async () => { showMode(r.value); try { await api("/api/prefs", {mode: r.value}); refreshMe(); toast("Month basis saved.", "good", 2500); } catch (e) { toast(esc(e.message), "bad"); } });
+$("#optAI").onchange = e => api("/api/prefs", {always_ai: e.target.checked}).then(() => toast("Saved.", "good", 2000)).catch(err => toast(esc(err.message), "bad"));
+$("#optHide").onchange = e => api("/api/prefs", {hide: e.target.checked}).then(() => toast("Saved.", "good", 2000)).catch(err => toast(esc(err.message), "bad"));
+try { $("#optCharts").checked = localStorage.getItem("pb_charts") !== "0"; } catch (e) {}
+$("#optCharts").onchange = e => { try { localStorage.setItem("pb_charts", e.target.checked ? "1" : "0"); } catch (err) {} };
+function showValidity(v) {
+  const left = v.days_left;
+  $("#valNow").innerHTML = !v.until ? '<b style="color:var(--bad,#d33)">Not set — the chatbot is expired.</b>'
+    : v.expired ? `<b style="color:var(--bad,#d33)">Expired on ${esc(v.until)}.</b>`
+    : `Valid till <b>${esc(v.until)}</b> · ${left} day${left === 1 ? "" : "s"} left`;
+  if (v.iso) $("#valDate").value = v.iso;
+}
+async function loadValidity() {
+  try { showValidity(await api("/api/admin/validity")); } catch (e) { $("#valNow").textContent = e.message; }
+}
+$("#valForm").onsubmit = async e => {
+  e.preventDefault();
+  try {
+    const v = await api("/api/admin/validity", {date: $("#valDate").value, password: $("#valPw").value});
+    $("#valPw").value = ""; showValidity(v); toast(`Renewed: the chatbot works till <b>${esc(v.until)}</b>.`, "good");
+  } catch (err) { $("#valPw").value = ""; toast(esc(err.message), "bad"); }
+};
+/* AI on / off (one button on the chat page, everyone) */
+function showAI(on) {
+  const b = $("#aiBtn"); b.dataset.on = on ? "1" : "0"; b.disabled = false;
+  b.innerHTML = `<span class="${on ? "on" : "off"}">AI ${on ? "on" : "off"}</span>`;
+  b.title = on ? "AI is running - click to turn it off" : "AI is off - click to turn it on";
+}
+$("#aiBtn").onclick = async () => {
+  const on = $("#aiBtn").dataset.on === "1";
+  if (on && !confirm("Turn the AI off for everyone? Questions that need AI will not be answered until someone turns it on again.")) return;
+  const b = $("#aiBtn"); b.disabled = true; b.textContent = on ? "Stopping…" : "Starting… (up to 30 s)";
+  try { const a = await api("/api/ai", {action: on ? "stop" : "start"}); showAI(a.running); refreshMe(); toast(a.running ? "AI is on." : "AI is off.", "good"); }
+  catch (err) { toast(esc(err.message), "bad"); try { showAI((await api("/api/ai")).running); } catch (e) { showAI(on); } }
+};
+/* "show data from" (master / admin): everyone sees months from here on */
+function showDataFrom(st) {
+  const r = st.range || [], w = st.whole || [];
+  $("#dfNow").innerHTML = (st.data_from ? `Showing data from <b>${esc(st.data_from_label)}</b> (set by ${esc(st.data_from_by)} on ${esc(st.data_from_at)})` : "Showing <b>all months</b>")
+    + (r[0] ? `<br>Visible now: <b>${esc(r[0])}</b> to <b>${esc(r[1])}</b>` : "")
+    + (w[0] ? ` · in the table: ${esc(w[0])} to ${esc(w[1])}` : "");
+  $("#dfMonth").value = st.data_from || "";
+  $("#dfClear").disabled = !st.data_from;
+}
+$("#dfForm").onsubmit = async e => {
+  e.preventDefault();
+  if (!confirm(`Everyone (users, admins and the master) will see data only from ${$("#dfMonth").value} on. Continue?`)) return;
+  try { const r = await api("/api/admin/data-from", {month: $("#dfMonth").value}); await refreshMe(); toast(`Done: everyone sees data from <b>${esc(r.label)}</b> on.`, "good"); }
+  catch (err) { toast(esc(err.message), "bad"); }
+};
+$("#dfClear").onclick = async () => {
+  if (!confirm("Everyone will see all months again. Continue?")) return;
+  try { await api("/api/admin/data-from", {clear: true}); await refreshMe(); toast("Done: everyone sees all months again.", "good"); }
+  catch (err) { toast(esc(err.message), "bad"); }
+};
+$("#pwForm").onsubmit = async e => {
+  e.preventDefault();
+  try { await api("/api/password", {current: $("#cpCur").value, new: $("#cpNew").value, confirm: $("#cpNew2").value}); e.target.reset(); toast("Password changed.", "good"); }
+  catch (err) { toast(esc(err.message), "bad"); }
+};
+
+function setTheme(dark, save) {
+  document.documentElement.dataset.theme = dark ? "dark" : "light"; $("#optDark").checked = dark;
+  try { localStorage.setItem("pb_theme", dark ? "dark" : "light"); } catch (e) {}
+  document.querySelectorAll(".amsg").forEach(el => {          // charts are drawn with theme colours: redraw them
+    const p = el.querySelector(".pane.chart");
+    if (el._a && p && p.innerHTML) p.innerHTML = renderChart(el._a.chart);
+  });
+  if (save && ME) api("/api/prefs", {theme: dark ? "dark" : "light"}).catch(() => {});
+}
+let saved = null; try { saved = localStorage.getItem("pb_theme"); } catch (e) {}
+setTheme(saved ? saved === "dark" : true);
+$("#themeBtn").onclick = () => setTheme(document.documentElement.dataset.theme !== "dark", true);
+$("#optDark").onchange = e => setTheme(e.target.checked, true);
+
+/* ---------- chat input ---------- */
+const ta = $("#q");
+function paintInput() {                       // admin "/" SQL: colour the text as it is typed
+  const sql = !!ME && (ME.role === "admin" || ME.role === "master") && ta.value.startsWith("/");
+  $("#askForm").classList.toggle("sqlmode", sql);
+  $("#qhl").innerHTML = sql ? hlTyping(ta.value) + "\n" : "";
+  $("#qhl").scrollTop = ta.scrollTop;
+}
+ta.addEventListener("input", () => { ta.style.height = "auto"; ta.style.height = Math.min(140, ta.scrollHeight) + "px"; paintInput(); });
+ta.addEventListener("scroll", () => { $("#qhl").scrollTop = ta.scrollTop; });
+ta.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("#askForm").requestSubmit(); } });
+$("#askForm").onsubmit = e => { e.preventDefault(); const v = ta.value; if (!v.trim() || BUSY) return; ta.value = ""; ta.style.height = "auto"; paintInput(); ask(v); };
+$("#newChat").onclick = () => { $("#chat").innerHTML = ""; $("#newChat").hidden = true; $("#tip").hidden = false; $("#intro").hidden = false; ta.focus(); };
+
+/* ---------- refresh (admin) ---------- */
+$("#refreshBtn").onclick = async () => {
+  if (ME.status.dummy) { toast(`<b>Dummy data</b><br>${esc(ME.status.dummy_msg)}`, "", 10000); return; }
+  if (!confirm(`This replaces all rows in ${ME.status.table} with fresh data from the refresh source and runs dbo.usp_RefreshPayrollall.\nIf anything fails, nothing is changed. Continue?`)) return;
+  const b = $("#refreshBtn"); b.disabled = true; b.textContent = "Refreshing… (can take a few minutes)";
+  try { const r = await api("/api/admin/refresh", {}); if (r.dummy) { toast(`<b>Dummy data</b><br>${esc(r.message)}`, "", 10000); return; } toast(`Done: <b>${r.new.toLocaleString("en-IN")}</b> rows (before ${r.old.toLocaleString("en-IN")}) in ${r.seconds}s.`, "good", 10000); refreshMe(); }
+  catch (e) { toast(esc(e.message), "bad", 15000); }
+  finally { b.disabled = false; b.textContent = "Refresh database"; }
+};
+
+/* ---------- sign in / out ---------- */
+function showLogin(msg) {
+  $("#pwModal").hidden = true; $("#pwmPw").textContent = "";
+  $("#app").hidden = true; $("#login").hidden = false; $("#loginPart").hidden = false; $("#pwPart").hidden = true;
+  $("#loginErr").textContent = msg || ""; $("#loginErr").className = "lerr"; setTimeout(() => $("#uid").focus(), 50);
+}
+function showPwChange() { $("#app").hidden = true; $("#login").hidden = false; $("#loginPart").hidden = true; $("#pwPart").hidden = false; $("#loginErr").textContent = ""; $("#pwCur").focus(); }
+$("#loginForm").onsubmit = async e => {
+  e.preventDefault(); $("#loginErr").textContent = "";
+  try {
+    if (!$("#pwPart").hidden) {
+      await api("/api/password", {current: $("#pwCur").value, new: $("#pwNew").value, confirm: $("#pwNew2").value});
+      ["#pwCur", "#pwNew", "#pwNew2"].forEach(s => $(s).value = "");
+    } else {
+      $("#loginBtn").disabled = true;
+      await api("/api/login", {uid: $("#uid").value, pw: $("#pw").value});
+      $("#pw").value = "";
+    }
+    await start();
+  } catch (err) { if (err.message !== "signed out") $("#loginErr").textContent = err.message; }
+  finally { $("#loginBtn").disabled = false; }
+};
+$("#logout").onclick = async () => {
+  try { await api("/api/logout", {}); } catch (e) {}
+  ME = null; DOCS.length = 0; $("#chat").innerHTML = ""; document.querySelectorAll(".toast").forEach(t => t.remove());
+  $("#newChat").hidden = true; $("#tip").hidden = false; $("#intro").hidden = false;
+  showLogin("Signed out.");
+};
+
+async function refreshMe() {
+  ME = await api("/api/me");
+  const st = ME.status, first = (ME.name || ME.uid).split(/[\s(]/)[0];
+  $("#meName").textContent = ME.name;
+  $("#meRole").textContent = {master: "Master administrator", admin: "Administrator"}[ME.role] || "User";
+  $("#meIni").textContent = (ME.name || ME.uid).trim()[0].toUpperCase();
+  $("#hello").innerHTML = `Hello ${esc(first)}.<br>Ask your <em>payroll</em> anything.`;
+  $("#statusLine").innerHTML = `<span class="${st.db ? "on" : "off"}">SQL Server ${st.db ? "connected" : "not reachable"}</span><span class="${st.ai ? "" : "off"}">${esc(st.model)} · Ollama${st.ai ? "" : " off"}</span><span>read-only</span><span>on-prem</span>`;
+  $("#sTable").textContent = st.table; $("#sLatest").textContent = st.latest || "–";
+  $("#sRefreshed").textContent = st.refreshed ? st.refreshed.replace(/-20\d\d/, "") : "–";
+  showMode(ME.prefs.mode); $("#optAI").checked = ME.prefs.always_ai; $("#optHide").checked = ME.prefs.hide;
+  const admin = ME.role === "admin" || ME.role === "master", master = ME.role === "master";
+  $("#admNav").hidden = !admin; $("#refreshBtn").hidden = !admin; $("#navActivity").hidden = !master;
+  $("#valPanel").hidden = !master; showAI(st.ai); $("#dfPanel").hidden = !admin;
+  const rg = st.range || [], sh = x => String(x).replace(/-20(\d\d)$/, "-$1");
+  $("#sRange").textContent = rg[0] ? `${sh(rg[0])} to ${sh(rg[1])}` : "–";
+  $("#sRange").title = st.data_from ? `Older months hidden for everyone (from ${st.data_from_label})` : "";
+  if (admin) showDataFrom(st);
+  $("#expBar").hidden = !ME.expiry; $("#expBar").textContent = ME.expiry ? "⏳ " + ME.expiry : "";
+  $("#hint").textContent = "Enter to send · Shift+Enter for a new line · read-only, all questions are logged" + (admin ? " · start with / to run your own SQL" : "");
+}
+/* signed out after 30 minutes without use (the server enforces it too).
+   Timers stop while the PC sleeps or the browser parks the tab, so the check also runs when the tab comes back and
+   on the first click / key - BEFORE that click counts as use, otherwise it would restart the 30 minutes. */
+const IDLE_MS = 30 * 60 * 1000;
+let lastAct = Date.now();
+const idleOver = () => ME && !BUSY && Date.now() - lastAct > IDLE_MS;
+async function idleOut() {
+  ME = null; DOCS.length = 0; $("#chat").innerHTML = ""; document.querySelectorAll(".toast").forEach(t => t.remove());
+  $("#newChat").hidden = true; $("#tip").hidden = false; $("#intro").hidden = false;
+  showLogin("Signed out after 30 minutes without use. Please sign in again.");
+  try { await api("/api/logout", {}); } catch (e) {}
+}
+["keydown", "pointerdown", "wheel", "touchstart"].forEach(ev => window.addEventListener(ev, e => {
+  if (idleOver()) { e.preventDefault(); e.stopPropagation(); idleOut(); return; }
+  lastAct = Date.now();
+}, {capture: true}));
+["focus", "pageshow"].forEach(ev => window.addEventListener(ev, () => { if (idleOver()) idleOut(); }));
+document.addEventListener("visibilitychange", () => { if (idleOver()) idleOut(); });
+setInterval(() => { if (idleOver()) idleOut(); }, 15000);
+async function start() {
+  try { await refreshMe(); } catch (e) { showLogin(e.message === "signed out" ? "" : e.message); return; }
+  if (ME.must_change) { showPwChange(); return; }
+  if (!saved) setTheme(ME.theme !== "light");
+  $("#login").hidden = true; $("#app").hidden = false; go("chat"); ta.focus();
+}
+start();
+</script>
+</body>
+</html>

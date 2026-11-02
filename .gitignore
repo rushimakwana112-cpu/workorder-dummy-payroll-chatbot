@@ -1,0 +1,41 @@
+# ---- private: logins, activity, this PC's validity key/date ----
+users.json
+users*.json
+audit_log.csv
+*.log
+.pb_ui_state
+.pb_ui_key
+stop.flag
+
+# ---- settings typed in chat / saved per install (may hold names, rules, data) ----
+policies.json
+workorder_groups.json
+teachings.json
+reminders.json
+data_from.json
+tds_history.json
+refresh_status.json
+query_history*.json
+*.tmp
+
+# ---- backups and old copies (contain the earlier company version) ----
+*.bak-*
+*.bak
+stage_*/
+
+# ---- notes for moving the office install, not part of the app ----
+CLAUDE_PROMPT.txt
+README_SETUP.txt
+
+# ---- python / tools ----
+__pycache__/
+*.pyc
+.venv/
+venv/
+.claude/
+
+# ---- data files never belong here ----
+*.xlsx
+*.xls
+*.csv
+*.bak.sql

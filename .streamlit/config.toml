@@ -1,0 +1,19 @@
+# Workorder Dummy theme. Light / dark is chosen by each user inside the app (switch in the left menu).
+[theme]
+base = "light"
+primaryColor = "#E65F26"
+backgroundColor = "#f4f7fc"
+secondaryBackgroundColor = "#eef3fb"
+textColor = "#0f1f3d"
+
+[client]
+toolbarMode = "minimal"
+
+[server]
+# old site: THIS PC only (http://localhost:8501). Everyone else uses the new site on :8080 (web_server.py),
+# which has the user list and per-person access rules. Put back "0.0.0.0" only if you need the old site on the network.
+address = "127.0.0.1"
+port = 8501
+
+[browser]
+gatherUsageStats = false

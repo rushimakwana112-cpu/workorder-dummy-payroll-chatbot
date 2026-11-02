@@ -1,0 +1,8 @@
+{
+  "text_columns": [
+    "Employee"
+  ],
+  "rename": {
+    "Employee": "Employee Code"
+  }
+}
